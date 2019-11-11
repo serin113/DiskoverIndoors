@@ -48,11 +48,10 @@ public class HomeFragment extends Fragment {
             public void surfaceCreated(SurfaceHolder holder) {
                 if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(getActivity(), new String[] {Manifest.permission.CAMERA}, 100);
-                    textView.setText("Permission not granted.");
+                    textView.setText("Camera access is important to be able to scan QR codes.");
                     return;
-                } else {
-                    textView.setText("Please focus on QR code.");
                 }
+                textView.setText("Scan QR code to recalibrate your position.");
                 try {
                     cameraSource.start(holder);
                 } catch (IOException e) {
