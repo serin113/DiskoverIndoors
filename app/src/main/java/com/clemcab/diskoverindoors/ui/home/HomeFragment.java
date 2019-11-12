@@ -41,7 +41,9 @@ public class HomeFragment extends Fragment {
         barcodeDetector = new BarcodeDetector.Builder(getActivity())
                 .setBarcodeFormats(Barcode.QR_CODE).build();
         cameraSource = new CameraSource.Builder(getActivity(),barcodeDetector)
-                .setRequestedPreviewSize(640,480).build();
+                .setRequestedPreviewSize(640,480)
+                .setAutoFocusEnabled(true)
+                .build();
 
         surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
