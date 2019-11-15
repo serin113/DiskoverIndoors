@@ -79,7 +79,7 @@ public class Accelerometer {
                             float x_vel = lastVelocity[0];
                             float y_vel = lastVelocity[1];
                             float z_vel = lastVelocity[2];
-                            //listener.onTranslation(sensorEvent.values[0],sensorEvent.values[1],sensorEvent.values[2]);
+
                             listener.onTranslation(x_vel, y_vel, z_vel);
                         }
                     }
