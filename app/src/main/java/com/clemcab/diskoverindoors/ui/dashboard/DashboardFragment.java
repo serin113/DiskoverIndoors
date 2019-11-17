@@ -27,11 +27,14 @@ public class DashboardFragment extends Fragment {
 
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
-            public void onTranslation(float x, float y, float z) {
+            public void onTranslation(float x_vel, float y_vel, float z_vel, float x, float y, float z) {
                 String text = "Accelerometer Readings:\n" +
+                              "x_vel = " + x_vel + "m/s\n " +
+                              "y_vel = " + y_vel + "m/s\n " +
+                              "z_vel = " + z_vel + "m/s\n " +
                               "x = " + x + "m/s\n " +
                               "y = " + y + "m/s\n " +
-                              "z = " + z + "m/s\n";
+                              "z = " + z + "m/s\n ";
                 textViewAccel.setText(text);
             }
         });

@@ -10,7 +10,7 @@ import java.util.Queue;
 
 public class Accelerometer {
     public interface  Listener {
-        void onTranslation(float x,float y, float z);
+        void onTranslation(float x_vel,float y_vel, float z_vel, float x, float y, float z);
     }
     private Listener listener;
     public void setListener(Listener l) {
@@ -20,9 +20,9 @@ public class Accelerometer {
     private Sensor sensor;
     private SensorEventListener sensorEventListener;
 
-    private int sensorBufferMax = 10;
+    private int sensorBufferMax = 4;
     private float[] lastVelocity = {0f,0f,0f};
-    private float sensorThresh = 0.1f;
+    private float sensorThresh = 0f;
 
     private Queue<Float> sensorValsX = new LinkedList<>();
     private Queue<Float> sensorValsY = new LinkedList<>();
@@ -79,8 +79,8 @@ public class Accelerometer {
                             float x_vel = lastVelocity[0];
                             float y_vel = lastVelocity[1];
                             float z_vel = lastVelocity[2];
-                            //listener.onTranslation(sensorEvent.values[0],sensorEvent.values[1],sensorEvent.values[2]);
-                            listener.onTranslation(x_vel, y_vel, z_vel);
+
+                            listener.onTranslation(x_vel, y_vel, z_vel, x_avg, y_avg, z_avg);
                         }
                     }
                 }
