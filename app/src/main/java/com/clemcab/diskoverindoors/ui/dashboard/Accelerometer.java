@@ -5,7 +5,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.util.Log;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -19,14 +18,19 @@ public class Accelerometer {
         listener = l;
     }
     private SensorManager sensorManager;
-    private Sensor sensor;
+    private Sensor accelSensor;
+    private Sensor gravAccelSensor;
+    private Sensor magSensor;
     private SensorEventListener sensorEventListener;
 
     private int sensorBufferMax = 4;
-    private float[] lastVelocity = {0f,0f,0f};
     private float sensorThresh = 0f;
-    private float velThresh = 0f;
-    private int usSamplingDelay = 16667;
+    private float velThresh = 0.01f;
+    private int usSamplingDelayAccel = 16667;
+
+    private final float[] gravAccelReading = new float[3];
+    private final float[] magReading = new float[3];
+    private final float[] rotationMatrix = new float[9];
 
     private Queue<Float> sensorValsX = new LinkedList<>();
     private Queue<Float> sensorValsY = new LinkedList<>();
@@ -36,7 +40,7 @@ public class Accelerometer {
         float velocity =
             (
                 (
-                        (float)sensorBufferMax / (1000000f/(float)usSamplingDelay)
+                        (float)sensorBufferMax / (1000000f/(float)usSamplingDelayAccel)
                 )/8f
             ) * (
                 (float)vals[0] + 3f*((float)vals[1]+(float)vals[2]) + (float)vals[3]
@@ -46,7 +50,9 @@ public class Accelerometer {
 
     Accelerometer (Context context) {
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
-        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        gravAccelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
         sensorEventListener = new SensorEventListener() {
             private void updateVals(Queue<Float> vals, float val) {
@@ -60,7 +66,15 @@ public class Accelerometer {
 
             @Override
             public void onSensorChanged(SensorEvent sensorEvent) {
-                if (listener != null) {
+                if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+                    System.arraycopy(sensorEvent.values, 0, gravAccelReading,
+                            0, gravAccelReading.length);
+
+                } else if (sensorEvent.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+                    System.arraycopy(sensorEvent.values, 0, magReading,
+                            0, magReading.length);
+
+                } else if (sensorEvent.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
                     updateVals(sensorValsX, sensorEvent.values[0]);
                     updateVals(sensorValsY, sensorEvent.values[1]);
                     updateVals(sensorValsZ, sensorEvent.values[2]);
@@ -68,15 +82,17 @@ public class Accelerometer {
                     Float[] y = sensorValsY.toArray(new Float[0]);
                     Float[] z = sensorValsZ.toArray(new Float[0]);
 
-                    if (sensorValsX.size() >= sensorBufferMax){
+                    if (sensorValsX.size() >= sensorBufferMax) {
+                        SensorManager.getRotationMatrix(rotationMatrix, null, gravAccelReading, magReading);
+
                         float x_avg = 0f;
                         float y_avg = 0f;
                         float z_avg = 0f;
 
-                        for (int i=0; i<sensorBufferMax; i++) {
-                            x_avg += x[i];
-                            y_avg += y[i];
-                            z_avg += z[i];
+                        for (int i = 0; i < sensorBufferMax; i++) {
+                            x_avg += x[i]*rotationMatrix[0] + y[i]*rotationMatrix[1] + z[i]*rotationMatrix[2];
+                            y_avg += x[i]*rotationMatrix[3] + y[i]*rotationMatrix[4] + z[i]*rotationMatrix[5];
+                            z_avg += x[i]*rotationMatrix[6] + y[i]*rotationMatrix[7] + z[i]*rotationMatrix[8];
                         }
                         x_avg /= sensorBufferMax;
                         y_avg /= sensorBufferMax;
@@ -98,6 +114,11 @@ public class Accelerometer {
                                 x_vel = Simp(x);
                                 y_vel = Simp(y);
                                 z_vel = Simp(z);
+
+                                x_vel = x_vel*rotationMatrix[0] + y_vel*rotationMatrix[1] + z_vel*rotationMatrix[2];
+                                y_vel = x_vel*rotationMatrix[3] + y_vel*rotationMatrix[4] + z_vel*rotationMatrix[5];
+                                z_vel = x_vel*rotationMatrix[6] + y_vel*rotationMatrix[7] + z_vel*rotationMatrix[8];
+
                             } else {
                                 x_vel = 0f;
                                 y_vel = 0f;
@@ -108,7 +129,8 @@ public class Accelerometer {
                             y_vel = 0f;
                             z_vel = 0f;
                         }
-                        listener.onTranslation(x_vel, y_vel, z_vel, x_avg, y_avg, z_avg);
+                        if (listener != null)
+                            listener.onTranslation(x_vel, y_vel, z_vel, x_avg, y_avg, z_avg);
                     }
                 }
             }
@@ -121,11 +143,14 @@ public class Accelerometer {
 
     }
     public void register() {
-        if (sensor.getMinDelay() > usSamplingDelay)
-            usSamplingDelay = sensor.getMinDelay();
-        else if (usSamplingDelay > sensor.getMaxDelay() && sensor.getMaxDelay() > 0)
-            usSamplingDelay = sensor.getMaxDelay();
-        sensorManager.registerListener(sensorEventListener, sensor, usSamplingDelay);
+        if (accelSensor.getMinDelay() > usSamplingDelayAccel)
+            usSamplingDelayAccel = accelSensor.getMinDelay();
+        else if (usSamplingDelayAccel > accelSensor.getMaxDelay() && accelSensor.getMaxDelay() > 0)
+            usSamplingDelayAccel = accelSensor.getMaxDelay();
+
+        sensorManager.registerListener(sensorEventListener, accelSensor, usSamplingDelayAccel);
+        sensorManager.registerListener(sensorEventListener, gravAccelSensor, usSamplingDelayAccel);
+        sensorManager.registerListener(sensorEventListener, magSensor, usSamplingDelayAccel);
     }
     public void unregister() {
         sensorManager.unregisterListener(sensorEventListener);
