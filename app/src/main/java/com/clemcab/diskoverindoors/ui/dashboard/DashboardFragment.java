@@ -32,7 +32,7 @@ public class DashboardFragment extends Fragment {
                               "x_vel = " + x_vel + " m/s\n " +
                               "y_vel = " + y_vel + " m/s\n " +
                               "z_vel = " + z_vel + " m/s\n " +
-                              "timeDiff = " + timeDiff + " Hz";
+                                "timeDiff = " + timeDiff + " Hz\n ";
                 textViewAccel.setText(text);
             }
         });
