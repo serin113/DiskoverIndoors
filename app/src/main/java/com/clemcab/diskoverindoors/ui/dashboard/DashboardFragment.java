@@ -42,8 +42,8 @@ public class DashboardFragment extends Fragment {
                               "timeDiff = " + timeDiff + " Hz\n " +
                               "x - " + x_coord + "\n" +
                               "y - " + y_coord + "\n" ;
-                map_pointer.setX(x_coord - 300*x_vel);
-                map_pointer.setY(y_coord + 300*y_vel);
+                map_pointer.setX(x_coord - (x_vel/timeDiff)*1000);
+                map_pointer.setY(y_coord + (y_vel/timeDiff)*1000);
                 textViewAccel.setText(text);
             }
         });

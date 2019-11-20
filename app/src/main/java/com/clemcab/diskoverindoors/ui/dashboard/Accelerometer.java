@@ -42,12 +42,13 @@ public class Accelerometer {
     private long sensorVals_timeStart;
 
     /* SETTINGS */
-    private final float accelThreshMin  = 0.1f;
+    private final float accelThreshMin  = 0.03f;
     private final float accelThreshMax  = 100f; //arbitrary max
     private final float velThreshMin    = 0.02f;
-    private final float velThreshMax    = 1f;
+    private final float velThreshMax    = 3f;
     private final boolean zAxisEnabled  = true;
     private final boolean groundLock    = true;
+    private final boolean gyroFusion    = false;
     private int usSamplingDelayAccel    = 16667;
 
     private float[] matrixMultiplication(float[] A, float[] B) {
@@ -258,8 +259,10 @@ public class Accelerometer {
                     if (groundLock) {
                         System.arraycopy(sensorEvent.values, 0, gravAccelReading,
                                 0, gravAccelReading.length);
-                        if(SensorManager.getRotationMatrix(rotationMatrix, null, gravAccelReading, magReading))
-                            SensorManager.getOrientation(rotationMatrix, accMagOrientation);
+                        if (gyroFusion) {
+                            if (SensorManager.getRotationMatrix(rotationMatrix, null, gravAccelReading, magReading))
+                                SensorManager.getOrientation(rotationMatrix, accMagOrientation);
+                        }
                     }
                     break;
 
@@ -271,7 +274,8 @@ public class Accelerometer {
                     break;
 
                 case Sensor.TYPE_GYROSCOPE:
-                    gyroFunction(sensorEvent);
+                    if (gyroFusion)
+                        gyroFunction(sensorEvent);
                     break;
 
                 case Sensor.TYPE_LINEAR_ACCELERATION:
@@ -349,25 +353,25 @@ public class Accelerometer {
 
     }
     public void register() {
-        if (accelSensor.getMinDelay() > usSamplingDelayAccel)
-            usSamplingDelayAccel = accelSensor.getMinDelay();
-        else if (usSamplingDelayAccel > accelSensor.getMaxDelay() && accelSensor.getMaxDelay() > 0)
-            usSamplingDelayAccel = accelSensor.getMaxDelay();
-
-        if (gravAccelSensor.getMinDelay() > usSamplingDelayAccel)
-            usSamplingDelayAccel = gravAccelSensor.getMinDelay();
-        else if (usSamplingDelayAccel > gravAccelSensor.getMaxDelay() && gravAccelSensor.getMaxDelay() > 0)
-            usSamplingDelayAccel = gravAccelSensor.getMaxDelay();
-
-        if (magSensor.getMinDelay() > usSamplingDelayAccel)
-            usSamplingDelayAccel = magSensor.getMinDelay();
-        else if (usSamplingDelayAccel > magSensor.getMaxDelay() && magSensor.getMaxDelay() > 0)
-            usSamplingDelayAccel = magSensor.getMaxDelay();
-
-        if (gyroSensor.getMinDelay() > usSamplingDelayAccel)
-            usSamplingDelayAccel = gyroSensor.getMinDelay();
-        else if (usSamplingDelayAccel >gyroSensor.getMaxDelay() && gyroSensor.getMaxDelay() > 0)
-            usSamplingDelayAccel = gyroSensor.getMaxDelay();
+//        if (accelSensor.getMinDelay() > usSamplingDelayAccel)
+//            usSamplingDelayAccel = accelSensor.getMinDelay();
+//        else if (usSamplingDelayAccel > accelSensor.getMaxDelay() && accelSensor.getMaxDelay() > 0)
+//            usSamplingDelayAccel = accelSensor.getMaxDelay();
+//
+//        if (gravAccelSensor.getMinDelay() > usSamplingDelayAccel)
+//            usSamplingDelayAccel = gravAccelSensor.getMinDelay();
+//        else if (usSamplingDelayAccel > gravAccelSensor.getMaxDelay() && gravAccelSensor.getMaxDelay() > 0)
+//            usSamplingDelayAccel = gravAccelSensor.getMaxDelay();
+//
+//        if (magSensor.getMinDelay() > usSamplingDelayAccel)
+//            usSamplingDelayAccel = magSensor.getMinDelay();
+//        else if (usSamplingDelayAccel > magSensor.getMaxDelay() && magSensor.getMaxDelay() > 0)
+//            usSamplingDelayAccel = magSensor.getMaxDelay();
+//
+//        if (gyroSensor.getMinDelay() > usSamplingDelayAccel)
+//            usSamplingDelayAccel = gyroSensor.getMinDelay();
+//        else if (usSamplingDelayAccel >gyroSensor.getMaxDelay() && gyroSensor.getMaxDelay() > 0)
+//            usSamplingDelayAccel = gyroSensor.getMaxDelay();
 
         sensorManager.registerListener(sensorEventListener, accelSensor, usSamplingDelayAccel);
         sensorManager.registerListener(sensorEventListener, gravAccelSensor, usSamplingDelayAccel);
