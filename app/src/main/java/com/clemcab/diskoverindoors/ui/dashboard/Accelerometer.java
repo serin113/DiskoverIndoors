@@ -6,6 +6,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
+import android.os.SystemClock;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.TimerTask;
@@ -13,7 +14,7 @@ import java.util.Timer;
 
 public class Accelerometer {
     public interface Listener {
-        void onTranslation(float x_vel,float y_vel, float z_vel, float x, float timeDiff);
+        void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff);
     }
     private Listener listener;
     public void setListener(Listener l) {
@@ -36,9 +37,9 @@ public class Accelerometer {
     private float[] gyroMatrix;
     private float[] fusedOrientation;
 
-    private List<Float> sensorValsX;
-    private List<Float> sensorValsY;
-    private List<Float> sensorValsZ;
+    private List<Double> sensorValsX;
+    private List<Double> sensorValsY;
+    private List<Double> sensorValsZ;
     private long sensorVals_timeStart;
 
     /* SETTINGS */
@@ -47,7 +48,7 @@ public class Accelerometer {
     private final float velThreshMin    = 0.02f;
     private final float velThreshMax    = 3f;
     private final boolean zAxisEnabled  = true;
-    private final boolean groundLock    = true;
+    private final boolean groundLock    = false;
     private final boolean gyroFusion    = false;
     private int usSamplingDelayAccel    = 16667;
 
@@ -204,8 +205,8 @@ public class Accelerometer {
         }
     }
 
-    private float Simp(List<Float> vals, float timeDiff) {
-        float velocity =
+    private double Simp(List<Double> vals, double timeDiff) {
+        double velocity =
             (
                 timeDiff * (
                     vals.get(0) + 3f*(vals.get(1)+vals.get(2)) + vals.get(3)
@@ -215,8 +216,8 @@ public class Accelerometer {
     }
 
     Accelerometer (Context context) {
-        fuseTimer.scheduleAtFixedRate(new calculateFusedOrientationTask(),
-                1000, TIME_CONSTANT);
+        if (gyroFusion)
+            fuseTimer.scheduleAtFixedRate(new calculateFusedOrientationTask(),1000, TIME_CONSTANT);
 
         gravAccelReading = new float[3];
         magReading = new float[3];
@@ -280,7 +281,7 @@ public class Accelerometer {
 
                 case Sensor.TYPE_LINEAR_ACCELERATION:
                     if (sensorValsX.size() == 0)
-                        sensorVals_timeStart = sensorEvent.timestamp;
+                        sensorVals_timeStart = SystemClock.elapsedRealtimeNanos();
 
                     if (groundLock) {
                         SensorManager.getRotationMatrix(
@@ -290,20 +291,19 @@ public class Accelerometer {
                                 magReading);
                     }
 
-                    float x_accel_t = sensorEvent.values[0];
-                    float y_accel_t = sensorEvent.values[1];
-                    float z_accel_t = sensorEvent.values[2];
+                    double x_accel_t = sensorEvent.values[0];
+                    double y_accel_t = sensorEvent.values[1];
+                    double z_accel_t = sensorEvent.values[2];
+                    float[] rot = groundLock ? gyroMatrix : rotationMatrix;
 
-                    float[] rot = gyroMatrix;
-
-                    float x_accel = groundLock ?
-                            x_accel_t * rot[0] + y_accel_t * rot[1] + z_accel_t * rot[2]
+                    double x_accel = groundLock ?
+                            x_accel_t * (double)rot[0] + y_accel_t * (double)rot[1] + z_accel_t * (double)rot[2]
                             : x_accel_t;
-                    float y_accel = groundLock ?
-                            x_accel_t * rot[3] + y_accel_t * rot[4] + z_accel_t * rot[5]
+                    double y_accel = groundLock ?
+                            x_accel_t * (double)rot[3] + y_accel_t * (double)rot[4] + z_accel_t * (double)rot[5]
                             : y_accel_t;
-                    float z_accel = groundLock ?
-                            x_accel_t * rot[6] + y_accel_t * rot[7] + z_accel_t * rot[8]
+                    double z_accel = groundLock ?
+                            x_accel_t * (double)rot[6] + y_accel_t * (double)rot[7] + z_accel_t * (double)rot[8]
                             : z_accel_t;
 
                     x_accel_t = Math.abs(x_accel);
@@ -318,23 +318,23 @@ public class Accelerometer {
                         sensorValsY.add(y_accel);
                         sensorValsZ.add(z_accel);
                     } else {
-                        float timeDiff = ((float)sensorEvent.timestamp - sensorVals_timeStart) / 1000f;
+                        double timeDiff = (double)(SystemClock.elapsedRealtimeNanos() - sensorVals_timeStart) / 1000d;
 
-                        float x_vel = Simp(sensorValsX, timeDiff);
-                        float y_vel = Simp(sensorValsY, timeDiff);
-                        float z_vel = Simp(sensorValsZ, timeDiff);
-                        float x_vel_t = Math.abs(x_vel);
-                        float y_vel_t = Math.abs(y_vel);
-                        float z_vel_t = Math.abs(z_vel);
+                        double x_vel = Simp(sensorValsX, timeDiff);
+                        double y_vel = Simp(sensorValsY, timeDiff);
+                        double z_vel = Simp(sensorValsZ, timeDiff);
+                        double x_vel_t = Math.abs(x_vel);
+                        double y_vel_t = Math.abs(y_vel);
+                        double z_vel_t = Math.abs(z_vel);
                         x_vel = x_vel_t <= velThreshMax ? (x_vel_t >= velThreshMin ? x_vel : 0f) : velThreshMax;
                         y_vel = y_vel_t <= velThreshMax ? (y_vel_t >= velThreshMin ? y_vel : 0f) : velThreshMax;
                         z_vel = z_vel_t <= velThreshMax ? (z_vel_t >= velThreshMin ? z_vel : 0f) : velThreshMax;
 
                         if (listener != null) {
                             if (zAxisEnabled)
-                                listener.onTranslation(x_vel, y_vel, z_vel, x_accel, 1000000f/timeDiff);
+                                listener.onTranslation(x_vel, y_vel, z_vel, 1000000d/timeDiff);
                             else
-                                listener.onTranslation(x_vel, y_vel, 0, x_accel, 1000000f/timeDiff);
+                                listener.onTranslation(x_vel, y_vel, 0, 1000000d/timeDiff);
                         }
 
                         sensorValsX.clear();
@@ -374,9 +374,12 @@ public class Accelerometer {
 //            usSamplingDelayAccel = gyroSensor.getMaxDelay();
 
         sensorManager.registerListener(sensorEventListener, accelSensor, usSamplingDelayAccel);
-        sensorManager.registerListener(sensorEventListener, gravAccelSensor, usSamplingDelayAccel);
-        sensorManager.registerListener(sensorEventListener, magSensor, usSamplingDelayAccel);
-        sensorManager.registerListener(sensorEventListener, gyroSensor, usSamplingDelayAccel);
+        if (groundLock || gyroFusion) {
+            sensorManager.registerListener(sensorEventListener, gravAccelSensor, usSamplingDelayAccel);
+            sensorManager.registerListener(sensorEventListener, magSensor, usSamplingDelayAccel);
+        }
+        if (gyroFusion)
+            sensorManager.registerListener(sensorEventListener, gyroSensor, usSamplingDelayAccel);
     }
     public void unregister() {
         sensorManager.unregisterListener(sensorEventListener);

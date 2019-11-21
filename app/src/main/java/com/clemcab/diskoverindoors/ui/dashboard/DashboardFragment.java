@@ -32,7 +32,7 @@ public class DashboardFragment extends Fragment {
 
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
-            public void onTranslation(float x_vel, float y_vel, float z_vel, float x_accel, float timeDiff) {
+            public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff) {
                 float x_coord = map_pointer.getX();
                 float y_coord = map_pointer.getY();
                 String text = "Accelerometer Readings:\n" +
@@ -42,8 +42,8 @@ public class DashboardFragment extends Fragment {
                               "timeDiff = " + timeDiff + " Hz\n " +
                               "x - " + x_coord + "\n" +
                               "y - " + y_coord + "\n" ;
-                map_pointer.setX(x_coord - (x_vel/timeDiff)*1000);
-                map_pointer.setY(y_coord + (y_vel/timeDiff)*1000);
+                map_pointer.setX(x_coord - (float)(x_vel*1000d/timeDiff));
+                map_pointer.setY(y_coord + (float)(y_vel*1000d/timeDiff));
                 textViewAccel.setText(text);
             }
         });
