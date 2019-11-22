@@ -1,7 +1,10 @@
 package com.clemcab.diskoverindoors.ui.home;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -29,22 +32,39 @@ import java.io.IOException;
 public class HomeFragment extends Fragment {
 
     private HomeViewModel homeViewModel;
-    SurfaceView surfaceView;
-    CameraSource cameraSource;
-    BarcodeDetector barcodeDetector;
+    private TextView textView;
+    private SurfaceView surfaceView;
+    private CameraSource cameraSource;
+    private BarcodeDetector barcodeDetector;
+    private boolean alertActive = false;
+
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         homeViewModel = ViewModelProviders.of(this).get(HomeViewModel.class);
         View root = inflater.inflate(R.layout.fragment_home, container, false);
-        surfaceView = (SurfaceView) root.findViewById(R.id.camerapreview);
-        final TextView textView = root.findViewById(R.id.text_home);
+        surfaceView = root.findViewById(R.id.camerapreview);
+        textView = root.findViewById(R.id.text_home);
+
+//        homeViewModel.getText().observe(this, new Observer<String>() {
+//            @Override
+//            public void onChanged(@Nullable String s) {
+//                textView.setText(s);
+//            }
+//        });
+        return root;
+    }
+    @Override
+    public void onViewCreated (View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        // initialize barcode reader and camera
         barcodeDetector = new BarcodeDetector.Builder(getActivity())
                 .setBarcodeFormats(Barcode.QR_CODE).build();
         cameraSource = new CameraSource.Builder(getActivity(),barcodeDetector)
                 .setRequestedPreviewSize(640,480)
                 .setAutoFocusEnabled(true)
                 .build();
-
+        // initialize surface view for the camera
         surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
@@ -71,7 +91,7 @@ public class HomeFragment extends Fragment {
                 cameraSource.stop();
             }
         });
-
+        // handle processing of detected QR codes
         barcodeDetector.setProcessor(new Detector.Processor<Barcode>() {
             @Override
             public void release() {
@@ -83,23 +103,52 @@ public class HomeFragment extends Fragment {
                 final SparseArray<Barcode> qrCodes = detections.getDetectedItems();
 
                 if (qrCodes.size()!=0) {
-                   textView.post(new Runnable() {
-                       @Override
-                       public void run() {
-                           Vibrator vibrator = (Vibrator) getActivity().getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE);
-                           textView.setText(qrCodes.valueAt(0).displayValue);
-                       }
-                   });
+                    final String scannedQRCode = qrCodes.valueAt(0).displayValue;
+
+                    getActivity().runOnUiThread(new Runnable(){
+                        @Override
+                        public void run() {
+                            if (!alertActive) {
+                                showAlert(scannedQRCode);
+                                alertActive = true;
+                            }
+                        }
+                    });
+                    textView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            textView.setText(scannedQRCode);
+                        }
+                    });
                 }
             }
         });
-
-//        homeViewModel.getText().observe(this, new Observer<String>() {
-//            @Override
-//            public void onChanged(@Nullable String s) {
-//                textView.setText(s);
-//            }
-//        });
-        return root;
     }
+
+    public void showAlert(String qrCode) {
+        final AlertDialog.Builder builder1 = new AlertDialog.Builder(getActivity());
+        builder1.setTitle("Navigate");
+        builder1.setMessage("You are at " + qrCode);
+        builder1.setCancelable(true);
+
+        builder1.setPositiveButton(
+                "Yes",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                    }
+                });
+
+        builder1.setNegativeButton(
+                "No",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                        alertActive = false;
+                    }
+                });
+        AlertDialog navigateDialog = builder1.create();
+        navigateDialog.show();
+    }
+
 }
