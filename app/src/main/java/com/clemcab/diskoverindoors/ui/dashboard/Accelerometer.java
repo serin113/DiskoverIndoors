@@ -27,7 +27,7 @@ public class Accelerometer {
     private int usSamplingDelayAccel    = 16667;    // suggested sensor update rate (microseconds)
 
     public interface Listener {
-        void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, double azimuth);
+        void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, int azimuth);
     }
     private Listener listener;
     public void setListener(Listener l) {
@@ -357,8 +357,9 @@ public class Accelerometer {
 
                         float[] orientationVals = new float[3];
                         SensorManager.getOrientation(rot, orientationVals);
-                        double azimuth = ((double)orientationVals[0]*180d)/Math.PI;
-                        azimuth = azimuth < 0 ? azimuth + 360 : azimuth;
+                        double azimuth_t = ((double)orientationVals[0]*180d)/Math.PI;
+                        azimuth_t = azimuth_t < 0 ? azimuth_t + 360 : azimuth_t;
+                        int azimuth = (int)(Math.round(azimuth_t) % 360);
                         if (listener != null)
                             listener.onTranslation(x_vel, y_vel, z_vel, 1000000d/timeDiff, azimuth);
 

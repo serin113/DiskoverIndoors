@@ -32,7 +32,7 @@ public class DashboardFragment extends Fragment {
 
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
-            public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, double azimuth) {
+            public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, int azimuth) {
                 float x_coord = map_pointer.getX();
                 float y_coord = map_pointer.getY();
                 double deltaX = (x_vel*1000d)/timeDiff;
