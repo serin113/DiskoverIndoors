@@ -35,6 +35,8 @@ public class DashboardFragment extends Fragment {
             public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff) {
                 float x_coord = map_pointer.getX();
                 float y_coord = map_pointer.getY();
+                double deltaX = (x_vel*1000d)/timeDiff;
+                double deltaY = (y_vel*1000d)/timeDiff;
                 String text = "Accelerometer Readings:\n" +
                               "x_vel = " + x_vel + " m/s\n " +
                               "y_vel = " + y_vel + " m/s\n " +
@@ -42,8 +44,8 @@ public class DashboardFragment extends Fragment {
                               "timeDiff = " + timeDiff + " Hz\n " +
                               "x - " + x_coord + "\n" +
                               "y - " + y_coord + "\n" ;
-                map_pointer.setX(x_coord - (float)(x_vel*1000d/timeDiff));
-                map_pointer.setY(y_coord + (float)(y_vel*1000d/timeDiff));
+                map_pointer.setX(x_coord - (float)deltaX);
+                map_pointer.setY(y_coord + (float)deltaY);
                 textViewAccel.setText(text);
             }
         });

@@ -6,13 +6,26 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
-import android.os.SystemClock;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.TimerTask;
 import java.util.Timer;
 
 public class Accelerometer {
+    /* SETTINGS */
+    private final float accelThreshMin  = 0.03f;    // accelerometer min threshold
+    private final float accelThreshMax  = 100f;     // accelerometer max threshold
+    //    private final float velThreshMin    = 0.02f;
+    private final float velThreshMin    = 0.2f;     // approx. velocity min threshold
+    private final float velThreshMax    = 3f;       // approx. velocity max threshold
+
+    private final float abaqConstVel    = 1f;       // AbAq algo: const. mov't rate
+
+    private final boolean abaqConst     = true;     // enable AbAq algo
+    private final boolean groundLock    = false;    // enable orientation locking
+    private final boolean gyroFusion    = false;    // enable gyro sensor fusion
+    private int usSamplingDelayAccel    = 16667;    // suggested sensor update rate (microseconds)
+
     public interface Listener {
         void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff);
     }
@@ -29,29 +42,21 @@ public class Accelerometer {
 
     private float[] gravAccelReading;
     private float[] magReading;
-    private float[] gyroReading;
     private float[] rotationMatrix;
-
-    private float[] accMagOrientation;
-    private float[] gyroOrientation;
-    private float[] gyroMatrix;
-    private float[] fusedOrientation;
 
     private List<Double> sensorValsX;
     private List<Double> sensorValsY;
     private List<Double> sensorValsZ;
     private long sensorVals_timeStart;
 
-    /* SETTINGS */
-    private final float accelThreshMin  = 0.03f;
-    private final float accelThreshMax  = 100f; //arbitrary max
-    private final float velThreshMin    = 0.02f;
-    private final float velThreshMax    = 3f;
-    private final boolean zAxisEnabled  = true;
-    private final boolean groundLock    = false;
-    private final boolean gyroFusion    = false;
-    private int usSamplingDelayAccel    = 16667;
+    /* USED ONLY WHEN gyroFusion IS ENABLED */
+    private float[] gyroReading;
+    private float[] accMagOrientation;
+    private float[] gyroOrientation;
+    private float[] gyroMatrix;
+    private float[] fusedOrientation;
 
+    /* GYRO FUSION STUFF */
     private float[] matrixMultiplication(float[] A, float[] B) {
         float[] result = new float[9];
 
@@ -70,6 +75,7 @@ public class Accelerometer {
         return result;
     }
 
+    /* GYRO FUSION STUFF */
     private float[] getRotationMatrixFromOrientation(float[] o) {
         float[] xM = new float[9];
         float[] yM = new float[9];
@@ -103,8 +109,8 @@ public class Accelerometer {
         return resultMatrix;
     }
 
+    /* GYRO FUSION STUFF */
     public final float EPSILON = 0.000000001f;
-
     private void getRotationVectorFromGyro(float[] gyroValues,
                                            float[] deltaRotationVector,
                                            float timeFactor)
@@ -137,10 +143,10 @@ public class Accelerometer {
         deltaRotationVector[3] = cosThetaOverTwo;
     }
 
+    /* GYRO FUSION STUFF */
     private static final float NS2S = 1.0f / 1000000000.0f;
     private float timestamp;
     private boolean initState = true;
-
     public void gyroFunction(SensorEvent event) {
         // don't start until first accelerometer/magnetometer orientation has been acquired
         if (accMagOrientation == null)
@@ -179,6 +185,7 @@ public class Accelerometer {
         SensorManager.getOrientation(gyroMatrix, gyroOrientation);
     }
 
+    /* GYRO FUSION STUFF */
     private static final int TIME_CONSTANT = 30;
     private static final float FILTER_COEFFICIENT = 0.98f;
     private Timer fuseTimer = new Timer();
@@ -205,51 +212,52 @@ public class Accelerometer {
         }
     }
 
+    /* SIMPSON'S 3/8 RULE ALGO */
     private double Simp(List<Double> vals, double timeDiff) {
         double velocity =
             (
                 timeDiff * (
-                    vals.get(0) + 3f*(vals.get(1)+vals.get(2)) + vals.get(3)
+                    vals.get(0) + 3d*(vals.get(1)+vals.get(2)) + vals.get(3)
                 )
-            ) / 2000000f;
+            ) / 2000000d;
         return velocity;
     }
 
+    /* ACCELEROMETER CLASS INITIATION */
     Accelerometer (Context context) {
-        if (gyroFusion)
-            fuseTimer.scheduleAtFixedRate(new calculateFusedOrientationTask(),1000, TIME_CONSTANT);
-
         gravAccelReading = new float[3];
         magReading = new float[3];
-        gyroReading = new float[3];
         rotationMatrix = new float[9];
 
-        accMagOrientation = new float[3];
-        gyroOrientation = new float[3];
-        gyroMatrix = new float[9];
-        fusedOrientation = new float[3];
+        if (gyroFusion) {
+            fuseTimer.scheduleAtFixedRate(new calculateFusedOrientationTask(),1000, TIME_CONSTANT);
+            gyroReading = new float[3];
+            accMagOrientation = new float[3];
+            gyroOrientation = new float[3];
+            gyroMatrix = new float[9];
+            fusedOrientation = new float[3];
+            gyroOrientation[0] = 0f;
+            gyroOrientation[1] = 0f;
+            gyroOrientation[2] = 0f;
+            gyroMatrix[0] = 1f;
+            gyroMatrix[1] = 0f;
+            gyroMatrix[2] = 0f;
+            gyroMatrix[3] = 0f;
+            gyroMatrix[4] = 1f;
+            gyroMatrix[5] = 0f;
+            gyroMatrix[6] = 0f;
+            gyroMatrix[7] = 0f;
+            gyroMatrix[8] = 1f;
+            gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        }
 
         sensorValsX = new ArrayList<>(4);
         sensorValsY = new ArrayList<>(4);
         sensorValsZ = new ArrayList<>(4);
 
-        gyroOrientation[0] = 0f;
-        gyroOrientation[1] = 0f;
-        gyroOrientation[2] = 0f;
-        gyroMatrix[0] = 1f;
-        gyroMatrix[1] = 0f;
-        gyroMatrix[2] = 0f;
-        gyroMatrix[3] = 0f;
-        gyroMatrix[4] = 1f;
-        gyroMatrix[5] = 0f;
-        gyroMatrix[6] = 0f;
-        gyroMatrix[7] = 0f;
-        gyroMatrix[8] = 1f;
-
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         gravAccelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
         sensorEventListener = new SensorEventListener() {
@@ -257,10 +265,10 @@ public class Accelerometer {
             public void onSensorChanged(SensorEvent sensorEvent) {
                 switch (sensorEvent.sensor.getType()) {
                 case Sensor.TYPE_ACCELEROMETER:
-                    if (groundLock) {
+                    if (groundLock || abaqConst) {
                         System.arraycopy(sensorEvent.values, 0, gravAccelReading,
                                 0, gravAccelReading.length);
-                        if (gyroFusion) {
+                        if (groundLock && gyroFusion && !abaqConst) {
                             if (SensorManager.getRotationMatrix(rotationMatrix, null, gravAccelReading, magReading))
                                 SensorManager.getOrientation(rotationMatrix, accMagOrientation);
                         }
@@ -268,7 +276,7 @@ public class Accelerometer {
                     break;
 
                 case Sensor.TYPE_MAGNETIC_FIELD:
-                    if (groundLock) {
+                    if (groundLock || abaqConst) {
                         System.arraycopy(sensorEvent.values, 0, magReading,
                                 0, magReading.length);
                     }
@@ -281,9 +289,9 @@ public class Accelerometer {
 
                 case Sensor.TYPE_LINEAR_ACCELERATION:
                     if (sensorValsX.size() == 0)
-                        sensorVals_timeStart = SystemClock.elapsedRealtimeNanos();
+                        sensorVals_timeStart = sensorEvent.timestamp;
 
-                    if (groundLock) {
+                    if (groundLock || abaqConst) {
                         SensorManager.getRotationMatrix(
                                 rotationMatrix,
                                 null,
@@ -294,31 +302,35 @@ public class Accelerometer {
                     double x_accel_t = sensorEvent.values[0];
                     double y_accel_t = sensorEvent.values[1];
                     double z_accel_t = sensorEvent.values[2];
-                    float[] rot = groundLock ? gyroMatrix : rotationMatrix;
+                    float[] rot;
+                    if (gyroFusion)
+                        rot = gyroMatrix;
+                    else
+                        rot = rotationMatrix;
 
-                    double x_accel = groundLock ?
+                    double x_accel = groundLock && !abaqConst ?
                             x_accel_t * (double)rot[0] + y_accel_t * (double)rot[1] + z_accel_t * (double)rot[2]
                             : x_accel_t;
-                    double y_accel = groundLock ?
+                    double y_accel = groundLock && !abaqConst ?
                             x_accel_t * (double)rot[3] + y_accel_t * (double)rot[4] + z_accel_t * (double)rot[5]
                             : y_accel_t;
-                    double z_accel = groundLock ?
+                    double z_accel = groundLock && !abaqConst ?
                             x_accel_t * (double)rot[6] + y_accel_t * (double)rot[7] + z_accel_t * (double)rot[8]
                             : z_accel_t;
 
                     x_accel_t = Math.abs(x_accel);
                     y_accel_t = Math.abs(y_accel);
                     z_accel_t = Math.abs(z_accel);
-                    x_accel = x_accel_t <= accelThreshMax ? (x_accel_t >= accelThreshMin ? x_accel : 0f) : accelThreshMax;
-                    y_accel = y_accel_t <= accelThreshMax ? (y_accel_t >= accelThreshMin ? y_accel : 0f) : accelThreshMax;
-                    z_accel = z_accel_t <= accelThreshMax ? (z_accel_t >= accelThreshMin ? z_accel : 0f) : accelThreshMax;
+                    x_accel = x_accel_t <= accelThreshMax ? (x_accel_t >= accelThreshMin ? x_accel : 0d) : accelThreshMax;
+                    y_accel = y_accel_t <= accelThreshMax ? (y_accel_t >= accelThreshMin ? y_accel : 0d) : accelThreshMax;
+                    z_accel = z_accel_t <= accelThreshMax ? (z_accel_t >= accelThreshMin ? z_accel : 0d) : accelThreshMax;
 
                     if (sensorValsX.size() < 4) {
                         sensorValsX.add(x_accel);
                         sensorValsY.add(y_accel);
                         sensorValsZ.add(z_accel);
                     } else {
-                        double timeDiff = (double)(SystemClock.elapsedRealtimeNanos() - sensorVals_timeStart) / 1000d;
+                        double timeDiff = (double)(sensorEvent.timestamp - sensorVals_timeStart) / 1000d;
 
                         double x_vel = Simp(sensorValsX, timeDiff);
                         double y_vel = Simp(sensorValsY, timeDiff);
@@ -326,16 +338,25 @@ public class Accelerometer {
                         double x_vel_t = Math.abs(x_vel);
                         double y_vel_t = Math.abs(y_vel);
                         double z_vel_t = Math.abs(z_vel);
-                        x_vel = x_vel_t <= velThreshMax ? (x_vel_t >= velThreshMin ? x_vel : 0f) : velThreshMax;
-                        y_vel = y_vel_t <= velThreshMax ? (y_vel_t >= velThreshMin ? y_vel : 0f) : velThreshMax;
-                        z_vel = z_vel_t <= velThreshMax ? (z_vel_t >= velThreshMin ? z_vel : 0f) : velThreshMax;
+                        x_vel = x_vel_t <= velThreshMax ? (x_vel_t >= velThreshMin ? x_vel : 0d) : velThreshMax;
+                        y_vel = y_vel_t <= velThreshMax ? (y_vel_t >= velThreshMin ? y_vel : 0d) : velThreshMax;
+                        z_vel = z_vel_t <= velThreshMax ? (z_vel_t >= velThreshMin ? z_vel : 0d) : velThreshMax;
 
-                        if (listener != null) {
-                            if (zAxisEnabled)
-                                listener.onTranslation(x_vel, y_vel, z_vel, 1000000d/timeDiff);
-                            else
-                                listener.onTranslation(x_vel, y_vel, 0, 1000000d/timeDiff);
+                        double velMag = Math.sqrt(x_vel*x_vel + y_vel*y_vel + z_vel*z_vel);
+                        if (abaqConst && velMag>0d) {
+                            x_vel_t = 0d;
+                            y_vel_t = -velMag;
+                            z_vel_t = 0d;
+                            x_vel = x_vel_t * (double)rot[0] + y_vel_t * (double)rot[1] + z_vel_t * (double)rot[2];
+                            y_vel = x_vel_t * (double)rot[3] + y_vel_t * (double)rot[4] + z_vel_t * (double)rot[5];
+                            z_vel = x_vel_t * (double)rot[6] + y_vel_t * (double)rot[7] + z_vel_t * (double)rot[8];
+                            x_vel = x_vel <= abaqConstVel ? x_vel : abaqConstVel;
+                            y_vel = y_vel <= abaqConstVel ? y_vel : abaqConstVel;
+                            z_vel = z_vel <= abaqConstVel ? z_vel : abaqConstVel;
                         }
+
+                        if (listener != null)
+                            listener.onTranslation(x_vel, y_vel, z_vel, 1000000d/timeDiff);
 
                         sensorValsX.clear();
                         sensorValsY.clear();
@@ -353,28 +374,8 @@ public class Accelerometer {
 
     }
     public void register() {
-//        if (accelSensor.getMinDelay() > usSamplingDelayAccel)
-//            usSamplingDelayAccel = accelSensor.getMinDelay();
-//        else if (usSamplingDelayAccel > accelSensor.getMaxDelay() && accelSensor.getMaxDelay() > 0)
-//            usSamplingDelayAccel = accelSensor.getMaxDelay();
-//
-//        if (gravAccelSensor.getMinDelay() > usSamplingDelayAccel)
-//            usSamplingDelayAccel = gravAccelSensor.getMinDelay();
-//        else if (usSamplingDelayAccel > gravAccelSensor.getMaxDelay() && gravAccelSensor.getMaxDelay() > 0)
-//            usSamplingDelayAccel = gravAccelSensor.getMaxDelay();
-//
-//        if (magSensor.getMinDelay() > usSamplingDelayAccel)
-//            usSamplingDelayAccel = magSensor.getMinDelay();
-//        else if (usSamplingDelayAccel > magSensor.getMaxDelay() && magSensor.getMaxDelay() > 0)
-//            usSamplingDelayAccel = magSensor.getMaxDelay();
-//
-//        if (gyroSensor.getMinDelay() > usSamplingDelayAccel)
-//            usSamplingDelayAccel = gyroSensor.getMinDelay();
-//        else if (usSamplingDelayAccel >gyroSensor.getMaxDelay() && gyroSensor.getMaxDelay() > 0)
-//            usSamplingDelayAccel = gyroSensor.getMaxDelay();
-
         sensorManager.registerListener(sensorEventListener, accelSensor, usSamplingDelayAccel);
-        if (groundLock || gyroFusion) {
+        if (groundLock || gyroFusion || abaqConst) {
             sensorManager.registerListener(sensorEventListener, gravAccelSensor, usSamplingDelayAccel);
             sensorManager.registerListener(sensorEventListener, magSensor, usSamplingDelayAccel);
         }
