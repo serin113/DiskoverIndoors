@@ -47,6 +47,7 @@ public class DashboardFragment extends Fragment {
                               "azimuth = " + azimuth;
                 map_pointer.setX(x_coord - (float)deltaX);
                 map_pointer.setY(y_coord + (float)deltaY);
+                map_pointer.setRotation(azimuth);
                 textViewAccel.setText(text);
             }
         });
