@@ -94,6 +94,18 @@ public class DBHelper extends SQLiteOpenHelper {
         return coords;
     }
 
+    public void getRoomList(String qrCode) {
+        final String table = "IndoorLocation";
+        final String[] columns = {"bldg"};
+        final String select =  "bldg=?";
+
+        String[] args = qrCode.split("::", 0);
+        String building_query = args[0];
+        String[] selectArgs = {building_query};
+
+        Cursor cursor = db.query(table, columns, select, selectArgs, null, null, null);
+    }
+
     public void copyDBFromAsset() throws IOException {
         InputStream in  = context.getAssets().open(DATABASE_NAME);
         String outputFileName = DATABASE_PATH+DATABASE_NAME;
