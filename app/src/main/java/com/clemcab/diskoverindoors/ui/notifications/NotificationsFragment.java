@@ -12,9 +12,12 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.clemcab.diskoverindoors.DBHelper;
+import com.clemcab.diskoverindoors.IndoorLocation;
 import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
 import com.clemcab.diskoverindoors.ui.home.HomeViewModel;
+
+import java.util.List;
 
 public class NotificationsFragment extends Fragment {
 
@@ -27,12 +30,6 @@ public class NotificationsFragment extends Fragment {
         notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
         View root = inflater.inflate(R.layout.fragment_notifications, container, false);
         final TextView textView = root.findViewById(R.id.text_notifications);
-//        notificationsViewModel.getText().observe(this, new Observer<String>() {
-//            @Override
-//            public void onChanged(@Nullable String s) {
-//                textView.setText(s);
-//            }
-//        });
 
         db = ((MainActivity)getActivity()).DBHelper;
 
@@ -42,8 +39,10 @@ public class NotificationsFragment extends Fragment {
             public void onChanged(@Nullable String s) {
                 scannedQrCode = s;
                 if (db.codeExists(scannedQrCode)) {
-                    Float coords[] = db.getCoordsFromCode(scannedQrCode);
-                    textView.setText("Valid "+coords[0].toString()+" "+coords[1].toString());
+//                    Float coords[] = db.getCoordsFromCode(scannedQrCode);
+//                    textView.setText("Valid "+coords[0].toString()+" "+coords[1].toString());
+                    List<IndoorLocation> list = db.getRoomList(scannedQrCode);
+                    textView.setText(list.get(0).title);
                 } else {
                     textView.setText("Invalid");
                 }

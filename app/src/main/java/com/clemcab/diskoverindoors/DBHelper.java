@@ -13,6 +13,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DBHelper extends SQLiteOpenHelper {
     // https://stackoverflow.com/a/37655109
@@ -93,17 +95,40 @@ public class DBHelper extends SQLiteOpenHelper {
         }
         return coords;
     }
-
-    public void getRoomList(String qrCode) {
+//    private class IndoorLocation {
+//        String building;
+//        int level;
+//        String title;
+//        float x_coord;
+//        float y_coord;
+//    }
+    public List<IndoorLocation> getRoomList(String qrCode) {
         final String table = "IndoorLocation";
-        final String[] columns = {"bldg"};
+        final String[] columns = {"bldg", "level", "title", "xcoord", "ycoord"};
         final String select =  "bldg=?";
 
         String[] args = qrCode.split("::", 0);
         String building_query = args[0];
         String[] selectArgs = {building_query};
 
-        Cursor cursor = db.query(table, columns, select, selectArgs, null, null, null);
+        Cursor cursor = db.query(table, columns, select, selectArgs, null, null, null, null);
+
+        List<IndoorLocation> list = new ArrayList<>();
+        int row_count = cursor.getCount();
+
+        cursor.moveToFirst();
+        for (int i = 0; i < row_count; i++) {
+            String building = cursor.getString(cursor.getColumnIndex("bldg"));
+            int level = cursor.getInt(cursor.getColumnIndex("level"));
+            String title = cursor.getString(cursor.getColumnIndex("title"));
+            float x_coord = cursor.getFloat(cursor.getColumnIndex("xcoord"));
+            float y_coord = cursor.getFloat(cursor.getColumnIndex("ycoord"));
+
+            list.add(new IndoorLocation(building, level, title, x_coord, y_coord));
+            cursor.moveToNext();
+        }
+
+        return list;
     }
 
     public void copyDBFromAsset() throws IOException {
