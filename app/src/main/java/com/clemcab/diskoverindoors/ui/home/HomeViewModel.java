@@ -6,14 +6,13 @@ import androidx.lifecycle.ViewModel;
 
 public class HomeViewModel extends ViewModel {
 
-    private MutableLiveData<String> mText;
+    public MutableLiveData<String> qrCode = new MutableLiveData<>();
+
+    public void setQrCode(String scannedQrCode) {
+        qrCode.setValue(scannedQrCode);
+    }
 
     public HomeViewModel() {
-        mText = new MutableLiveData<>();
-        mText.setValue("Home fragment");
     }
 
-    public LiveData<String> getText() {
-        return mText;
-    }
 }

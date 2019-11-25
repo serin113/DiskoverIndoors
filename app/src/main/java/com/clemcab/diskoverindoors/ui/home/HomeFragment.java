@@ -49,6 +49,8 @@ public class HomeFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_home, container, false);
         surfaceView = root.findViewById(R.id.camerapreview);
         textView = root.findViewById(R.id.text_home);
+
+        homeViewModel = ViewModelProviders.of(this.getActivity()).get(HomeViewModel.class);
 //        homeViewModel.getText().observe(this, new Observer<String>() {
 //            @Override
 //            public void onChanged(@Nullable String s) {
@@ -129,7 +131,7 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    public void displayAlert(String qrCode) {
+    public void displayAlert(final String qrCode) {
         final AlertDialog.Builder builder1 = new AlertDialog.Builder(getActivity());
         builder1.setTitle("Navigate");
         builder1.setMessage("You are at " + qrCode);
@@ -140,6 +142,7 @@ public class HomeFragment extends Fragment {
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         Navigation.findNavController(getView()).navigate(R.id.action_select_destination);
+                        homeViewModel.setQrCode(qrCode);
                     }
                 });
 
