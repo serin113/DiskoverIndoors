@@ -2,7 +2,6 @@ package com.clemcab.diskoverindoors;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
@@ -29,11 +28,6 @@ public class DBHelper extends SQLiteOpenHelper {
         this.context = context;
 
         try {
-            File file = new File(DATABASE_PATH+DATABASE_NAME);
-            if(file.exists()) {
-                file.delete();
-                Log.d(TAG, "Database deleted.");
-            }
             if (this.checkDB()) {
                 Log.e(TAG,"SQLite DB already exists");
             } else {
@@ -52,6 +46,18 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int a, int b) {
+        Log.d(TAG, "SQLite DB version changed from "
+                +Integer.toString(a)+" to "+Integer.toString(b));
+        File file = new File(DATABASE_PATH+DATABASE_NAME);
+        try {
+            if(file.exists()) {
+                file.delete();
+                Log.d(TAG, "SQLite DB deleted");
+            }
+            this.copyDBFromAsset();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void openDB() throws SQLException {
@@ -70,12 +76,30 @@ public class DBHelper extends SQLiteOpenHelper {
         return exists;
     }
 
+    public Float[] getCoordsFromCode(String code) {
+        final String table = "QRTag";
+        final String[] columns = {"xcoord", "ycoord"};
+        final String select = "url=?";
+        Float[] coords = new Float[2];
+        coords[0] = null;
+        coords[1] = null;
+        String[] selectArgs = {code};
+        String limit = "1";
+        Cursor cursor = db.query(table, columns, select, selectArgs, null, null, null, limit);
+        if (cursor.getCount() > 0) {
+            cursor.moveToFirst();
+            coords[0] = cursor.getFloat(cursor.getColumnIndex("xcoord"));
+            coords[1] = cursor.getFloat(cursor.getColumnIndex("ycoord"));
+        }
+        return coords;
+    }
+
     public void copyDBFromAsset() throws IOException {
         InputStream in  = context.getAssets().open(DATABASE_NAME);
         String outputFileName = DATABASE_PATH+DATABASE_NAME;
         File databaseFile = new File(DATABASE_PATH);
         // check if databases folder exists, if not create one and its subfolders
-        Log.e("sample", "Starting copying");
+        Log.e(TAG, "Copying SQLite DB from assets");
         if (!databaseFile.exists()) {
             databaseFile.mkdir();
         }
@@ -85,7 +109,7 @@ public class DBHelper extends SQLiteOpenHelper {
         while ((length = in.read(buffer))>0){
             out.write(buffer,0,length);
         }
-        Log.e("sample", "Completed" );
+        Log.e(TAG, "Finished copying SQLite DB" );
         out.flush();
         out.close();
         in.close();

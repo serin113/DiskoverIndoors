@@ -41,8 +41,9 @@ public class NotificationsFragment extends Fragment {
             @Override
             public void onChanged(@Nullable String s) {
                 scannedQrCode = s;
-                if (db.codeExists(s)) {
-                    textView.setText("Valid");
+                if (db.codeExists(scannedQrCode)) {
+                    Float coords[] = db.getCoordsFromCode(scannedQrCode);
+                    textView.setText("Valid "+coords[0].toString()+" "+coords[1].toString());
                 } else {
                     textView.setText("Invalid");
                 }
