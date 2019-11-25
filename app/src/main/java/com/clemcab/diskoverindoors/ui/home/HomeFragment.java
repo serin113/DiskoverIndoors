@@ -19,9 +19,12 @@ import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import com.clemcab.diskoverindoors.R;
+import com.clemcab.diskoverindoors.ui.notifications.NotificationsFragment;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
@@ -38,13 +41,11 @@ public class HomeFragment extends Fragment {
     private BarcodeDetector barcodeDetector;
     private boolean alertActive = false;
 
-
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         homeViewModel = ViewModelProviders.of(this).get(HomeViewModel.class);
         View root = inflater.inflate(R.layout.fragment_home, container, false);
         surfaceView = root.findViewById(R.id.camerapreview);
         textView = root.findViewById(R.id.text_home);
-
 //        homeViewModel.getText().observe(this, new Observer<String>() {
 //            @Override
 //            public void onChanged(@Nullable String s) {
@@ -109,7 +110,7 @@ public class HomeFragment extends Fragment {
                         @Override
                         public void run() {
                             if (!alertActive) {
-                                showAlert(scannedQRCode);
+                                displayAlert(scannedQRCode);
                                 alertActive = true;
                             }
                         }
@@ -125,7 +126,7 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    public void showAlert(String qrCode) {
+    public void displayAlert(String qrCode) {
         final AlertDialog.Builder builder1 = new AlertDialog.Builder(getActivity());
         builder1.setTitle("Navigate");
         builder1.setMessage("You are at " + qrCode);
@@ -135,7 +136,12 @@ public class HomeFragment extends Fragment {
                 "Yes",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        dialog.cancel();
+                        FragmentTransaction fragmentTransaction;
+                        Fragment LocationFragment = new NotificationsFragment();
+                        fragmentTransaction = getActivity().getSupportFragmentManager().beginTransaction();
+                        fragmentTransaction.replace(R.id.nav_host_fragment, LocationFragment);
+                        fragmentTransaction.addToBackStack(null);
+                        fragmentTransaction.commit();
                     }
                 });
 
