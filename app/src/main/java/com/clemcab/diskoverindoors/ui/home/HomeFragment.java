@@ -15,6 +15,8 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -26,6 +28,8 @@ import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.Navigation;
 
+import com.clemcab.diskoverindoors.DBHelper;
+import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
 import com.clemcab.diskoverindoors.ui.notifications.NotificationsFragment;
 import com.google.android.gms.vision.CameraSource;
@@ -37,12 +41,14 @@ import java.io.IOException;
 
 public class HomeFragment extends Fragment {
 
-    private HomeViewModel homeViewModel;
     private TextView textView;
+    private Toast toast = null;
     private SurfaceView surfaceView;
     private CameraSource cameraSource;
+    private HomeViewModel homeViewModel;
     private BarcodeDetector barcodeDetector;
-    private boolean alertActive = false;
+    private boolean isAlertActive = false;
+    private DBHelper db;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         homeViewModel = ViewModelProviders.of(this).get(HomeViewModel.class);
@@ -51,12 +57,6 @@ public class HomeFragment extends Fragment {
         textView = root.findViewById(R.id.text_home);
 
         homeViewModel = ViewModelProviders.of(this.getActivity()).get(HomeViewModel.class);
-//        homeViewModel.getText().observe(this, new Observer<String>() {
-//            @Override
-//            public void onChanged(@Nullable String s) {
-//                textView.setText(s);
-//            }
-//        });
         return root;
     }
     @Override
@@ -111,19 +111,23 @@ public class HomeFragment extends Fragment {
                 if (qrCodes.size()!=0) {
                     final String scannedQRCode = qrCodes.valueAt(0).displayValue;
 
+                    db = ((MainActivity)getActivity()).DBHelper;
+
                     getActivity().runOnUiThread(new Runnable(){
                         @Override
                         public void run() {
-                            if (!alertActive) {
-                                displayAlert(scannedQRCode);
-                                alertActive = true;
+                            if (db.codeExists(scannedQRCode)) {
+                                if (!isAlertActive) {
+                                    displayAlert(scannedQRCode);
+                                    isAlertActive = true;
+                                }
+                            } else {
+                                if (toast != null){
+                                    toast.cancel();
+                                }
+                                toast = Toast.makeText(getActivity(), "Invalid QR Code: " + scannedQRCode, Toast.LENGTH_SHORT);
+                                toast.show();
                             }
-                        }
-                    });
-                    textView.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            textView.setText(scannedQRCode);
                         }
                     });
                 }
@@ -134,28 +138,39 @@ public class HomeFragment extends Fragment {
     public void displayAlert(final String qrCode) {
         final AlertDialog.Builder builder1 = new AlertDialog.Builder(getActivity());
         builder1.setTitle("Navigate");
-        builder1.setMessage("You are at " + qrCode);
+
+        String[] args = qrCode.split("::",0);
+        String message = "You are currently at " + args[0] + ".";
+        builder1.setMessage(message);
+
         builder1.setCancelable(true);
 
         builder1.setPositiveButton(
-                "Yes",
+                "Choose Destination",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         Navigation.findNavController(getView()).navigate(R.id.action_select_destination);
                         homeViewModel.setQrCode(qrCode);
+                        isAlertActive = false;
                     }
                 });
 
         builder1.setNegativeButton(
-                "No",
+                "Cancel",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         dialog.cancel();
-                        alertActive = false;
+                        isAlertActive = false;
                     }
                 });
         AlertDialog navigateDialog = builder1.create();
         navigateDialog.show();
     }
-
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (toast != null) {
+            toast.cancel();
+        }
+    }
 }
