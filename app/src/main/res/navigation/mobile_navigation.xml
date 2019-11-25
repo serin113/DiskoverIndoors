@@ -9,7 +9,11 @@
         android:id="@+id/navigation_qr"
         android:name="com.clemcab.diskoverindoors.ui.home.HomeFragment"
         android:label="@string/title_home"
-        tools:layout="@layout/fragment_home" />
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_select_destination"
+            app:destination="@id/navigation_locations"/>
+    </fragment>
 
     <fragment
         android:id="@+id/navigation_navigation"

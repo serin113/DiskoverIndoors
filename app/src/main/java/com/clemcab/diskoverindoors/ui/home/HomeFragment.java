@@ -23,6 +23,9 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
+import androidx.navigation.fragment.NavHostFragment;
+import androidx.navigation.Navigation;
+
 import com.clemcab.diskoverindoors.R;
 import com.clemcab.diskoverindoors.ui.notifications.NotificationsFragment;
 import com.google.android.gms.vision.CameraSource;
@@ -136,12 +139,7 @@ public class HomeFragment extends Fragment {
                 "Yes",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        FragmentTransaction fragmentTransaction;
-                        Fragment LocationFragment = new NotificationsFragment();
-                        fragmentTransaction = getActivity().getSupportFragmentManager().beginTransaction();
-                        fragmentTransaction.replace(R.id.nav_host_fragment, LocationFragment);
-                        fragmentTransaction.addToBackStack(null);
-                        fragmentTransaction.commit();
+                        Navigation.findNavController(getView()).navigate(R.id.action_select_destination);
                     }
                 });
 
