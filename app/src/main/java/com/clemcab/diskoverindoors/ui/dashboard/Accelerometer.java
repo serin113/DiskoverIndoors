@@ -224,7 +224,7 @@ public class Accelerometer {
     }
 
     /* ACCELEROMETER CLASS INITIATION */
-    Accelerometer (Context context) {
+    public Accelerometer (Context context) {
         gravAccelReading = new float[3];
         magReading = new float[3];
         rotationMatrix = new float[9];
@@ -342,7 +342,7 @@ public class Accelerometer {
                         y_vel = y_vel_t <= velThreshMax ? (y_vel_t >= velThreshMin ? y_vel : 0d) : velThreshMax;
                         z_vel = z_vel_t <= velThreshMax ? (z_vel_t >= velThreshMin ? z_vel : 0d) : velThreshMax;
 
-                        double velMag = Math.sqrt(x_vel*x_vel + y_vel*y_vel + z_vel*z_vel);
+                        double velMag = Math.sqrt(x_vel*x_vel + y_vel*y_vel);
                         if (abaqConst && velMag>0d) {
                             x_vel_t = 0d;
                             y_vel_t = -velMag;

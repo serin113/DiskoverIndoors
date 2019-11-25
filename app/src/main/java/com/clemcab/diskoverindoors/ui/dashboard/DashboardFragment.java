@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProviders;
 
+import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
 
 public class DashboardFragment extends Fragment {
@@ -20,6 +21,11 @@ public class DashboardFragment extends Fragment {
 
     private ImageView map_pointer;
 
+//    @Override
+//    public void onCreate() {
+//        accelerometer = ((MainActivity)getActivity()).Accelerometer;
+//    }
+
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         dashboardViewModel = ViewModelProviders.of(this).get(DashboardViewModel.class);
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
@@ -27,6 +33,7 @@ public class DashboardFragment extends Fragment {
 
         map_pointer = root.findViewById(R.id.map_pointer);
 
+//        accelerometer = ((MainActivity)getActivity()).Accelerometer;
         accelerometer = new Accelerometer(getActivity());
         final TextView textViewAccel = root.findViewById(R.id.textViewAccel);
 
