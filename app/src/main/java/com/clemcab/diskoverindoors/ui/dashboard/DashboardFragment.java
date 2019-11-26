@@ -48,8 +48,8 @@ public class DashboardFragment extends Fragment {
         accelerometer = new Accelerometer(getActivity());
         final TextView textViewAccel = root.findViewById(R.id.textViewAccel);
 
-        if (this != null) {
-            notificationsViewModel = ViewModelProviders.of(this.getActivity()).get(NotificationsViewModel.class);
+        notificationsViewModel = ViewModelProviders.of(this.getActivity()).get(NotificationsViewModel.class);
+        if (notificationsViewModel.navData != null) {
             notificationsViewModel.navData.observe(this, new Observer<NavigationData>() {
                 @Override
                 public void onChanged(NavigationData navData) {

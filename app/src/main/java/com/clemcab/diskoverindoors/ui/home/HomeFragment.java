@@ -32,6 +32,7 @@ import com.clemcab.diskoverindoors.DBHelper;
 import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
 import com.clemcab.diskoverindoors.ui.notifications.NotificationsFragment;
+import com.clemcab.diskoverindoors.ui.notifications.NotificationsViewModel;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
@@ -46,16 +47,17 @@ public class HomeFragment extends Fragment {
     private SurfaceView surfaceView;
     private CameraSource cameraSource;
     private HomeViewModel homeViewModel;
+    private NotificationsViewModel notificationsViewModel;
     private BarcodeDetector barcodeDetector;
     private boolean isAlertActive = false;
     private DBHelper db;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        homeViewModel = ViewModelProviders.of(this).get(HomeViewModel.class);
         View root = inflater.inflate(R.layout.fragment_home, container, false);
         surfaceView = root.findViewById(R.id.camerapreview);
         textView = root.findViewById(R.id.text_home);
 
+        notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
         homeViewModel = ViewModelProviders.of(this.getActivity()).get(HomeViewModel.class);
         return root;
     }
