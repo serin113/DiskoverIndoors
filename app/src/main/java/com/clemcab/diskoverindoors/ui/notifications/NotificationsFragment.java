@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ListView;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
@@ -25,27 +26,26 @@ public class NotificationsFragment extends Fragment {
     private HomeViewModel homeViewModel;
     private String scannedQrCode;
     private DBHelper db;
+    private List<IndoorLocation> indoorLocationList;
+    private Float[] startingCoords;
+    private ListView listView;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
         View root = inflater.inflate(R.layout.fragment_notifications, container, false);
-        final TextView textView = root.findViewById(R.id.text_notifications);
+        listView = root.findViewById(R.id.listView);
 
         db = ((MainActivity)getActivity()).DBHelper;
 
         homeViewModel = ViewModelProviders.of(this.getActivity()).get(HomeViewModel.class);
         homeViewModel.qrCode.observe(this, new Observer<String>() {
             @Override
-            public void onChanged(@Nullable String s) {
-                scannedQrCode = s;
-                if (db.codeExists(scannedQrCode)) {
-//                    Float coords[] = db.getCoordsFromCode(scannedQrCode);
-//                    textView.setText("Valid "+coords[0].toString()+" "+coords[1].toString());
-                    List<IndoorLocation> list = db.getRoomList(scannedQrCode);
-                    textView.setText(list.get(0).title);
-                } else {
-                    textView.setText("Invalid");
-                }
+            public void onChanged(@Nullable String qrCode) {
+                scannedQrCode = qrCode;
+                startingCoords = db.getCoordsFromCode(scannedQrCode);
+                indoorLocationList = db.getRoomList(scannedQrCode);
+                CustomAdapter customAdapter = new CustomAdapter(getContext(), indoorLocationList);
+                listView.setAdapter(customAdapter);
             }
         });
 

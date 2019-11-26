@@ -104,7 +104,7 @@ public class DBHelper extends SQLiteOpenHelper {
 //    }
     public List<IndoorLocation> getRoomList(String qrCode) {
         final String table = "IndoorLocation";
-        final String[] columns = {"bldg", "level", "title", "xcoord", "ycoord"};
+        final String[] columns = {"bldg", "level", "title", "subtitle", "xcoord", "ycoord"};
         final String select =  "bldg=?";
 
         String[] args = qrCode.split("::", 0);
@@ -121,10 +121,11 @@ public class DBHelper extends SQLiteOpenHelper {
             String building = cursor.getString(cursor.getColumnIndex("bldg"));
             int level = cursor.getInt(cursor.getColumnIndex("level"));
             String title = cursor.getString(cursor.getColumnIndex("title"));
+            String subtitle = cursor.getString(cursor.getColumnIndex("subtitle"));
             float x_coord = cursor.getFloat(cursor.getColumnIndex("xcoord"));
             float y_coord = cursor.getFloat(cursor.getColumnIndex("ycoord"));
 
-            list.add(new IndoorLocation(building, level, title, x_coord, y_coord));
+            list.add(new IndoorLocation(building, level, title, subtitle, x_coord, y_coord));
             cursor.moveToNext();
         }
 
