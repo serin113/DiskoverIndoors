@@ -11,7 +11,6 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProviders;
 
-import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
 
 public class DashboardFragment extends Fragment {
@@ -39,11 +38,12 @@ public class DashboardFragment extends Fragment {
 
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
-            public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, int azimuth) {
+            public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, float azimuth) {
+                double multiplier = 500d;
                 float x_coord = map_pointer.getX();
                 float y_coord = map_pointer.getY();
-                double deltaX = (x_vel*1000d)/timeDiff;
-                double deltaY = (y_vel*1000d)/timeDiff;
+                double deltaX = (x_vel*multiplier)/timeDiff;
+                double deltaY = (y_vel*multiplier)/timeDiff;
                 String text = "Accelerometer Readings:\n" +
                               "x_vel = " + x_vel + " m/s\n " +
                               "y_vel = " + y_vel + " m/s\n " +
@@ -54,8 +54,11 @@ public class DashboardFragment extends Fragment {
                               "azimuth = " + azimuth;
                 map_pointer.setX(x_coord - (float)deltaX);
                 map_pointer.setY(y_coord + (float)deltaY);
-                map_pointer.setRotation(azimuth);
                 textViewAccel.setText(text);
+            }
+            @Override
+            public void onRotation(float azimuth) {
+                map_pointer.setRotation(azimuth);
             }
         });
 

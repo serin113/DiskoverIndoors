@@ -5,6 +5,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.util.Log;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -13,13 +14,13 @@ import java.util.Timer;
 
 public class Accelerometer {
     /* SETTINGS */
-    private final float accelThreshMin  = 0.03f;    // accelerometer min threshold
-    private final float accelThreshMax  = 100f;     // accelerometer max threshold
+    private final double accelThreshMin  = 0.03d;    // accelerometer min threshold
+    private final double accelThreshMax  = 100d;     // accelerometer max threshold
     //    private final float velThreshMin    = 0.02f;
-    private final float velThreshMin    = 0.2f;     // approx. velocity min threshold
-    private final float velThreshMax    = 3f;       // approx. velocity max threshold
+    private final double velThreshMin    = 0.2d;     // approx. velocity min threshold
+    private final double velThreshMax    = 3d;       // approx. velocity max threshold
 
-    private final float abaqConstVel    = 1f;       // AbAq algo: const. mov't rate
+    private final double abaqConstVel    = 1d;       // AbAq algo: const. mov't rate
 
     private final boolean abaqConst     = true;     // enable AbAq algo
     private final boolean groundLock    = false;    // enable orientation locking
@@ -27,7 +28,8 @@ public class Accelerometer {
     private int usSamplingDelayAccel    = 16667;    // suggested sensor update rate (microseconds)
 
     public interface Listener {
-        void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, int azimuth);
+        void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, float azimuth);
+        void onRotation(float azimuth);
     }
     private Listener listener;
     public void setListener(Listener l) {
@@ -44,6 +46,7 @@ public class Accelerometer {
     private float[] magReading;
     private float[] rotationMatrix;
 
+    private float azimuth;
     private List<Double> sensorValsX;
     private List<Double> sensorValsY;
     private List<Double> sensorValsZ;
@@ -248,7 +251,6 @@ public class Accelerometer {
             gyroMatrix[6] = 0f;
             gyroMatrix[7] = 0f;
             gyroMatrix[8] = 1f;
-            gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         }
 
         sensorValsX = new ArrayList<>(4);
@@ -259,6 +261,7 @@ public class Accelerometer {
         accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         gravAccelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
         sensorEventListener = new SensorEventListener() {
             @Override
@@ -279,6 +282,14 @@ public class Accelerometer {
                     if (groundLock || abaqConst) {
                         System.arraycopy(sensorEvent.values, 0, magReading,
                                 0, magReading.length);
+                        if (abaqConst) {
+                            float[] orientationVals = new float[3];
+                            SensorManager.getOrientation(rotationMatrix, orientationVals);
+                            azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI);
+                            azimuth = azimuth < 0f ? azimuth + 360f : azimuth;
+                            if (listener != null)
+                                listener.onRotation(azimuth);
+                        }
                     }
                     break;
 
@@ -338,28 +349,39 @@ public class Accelerometer {
                         double x_vel_t = Math.abs(x_vel);
                         double y_vel_t = Math.abs(y_vel);
                         double z_vel_t = Math.abs(z_vel);
-                        x_vel = x_vel_t <= velThreshMax ? (x_vel_t >= velThreshMin ? x_vel : 0d) : velThreshMax;
-                        y_vel = y_vel_t <= velThreshMax ? (y_vel_t >= velThreshMin ? y_vel : 0d) : velThreshMax;
-                        z_vel = z_vel_t <= velThreshMax ? (z_vel_t >= velThreshMin ? z_vel : 0d) : velThreshMax;
+                        x_vel = (x_vel_t <= velThreshMax) ?
+                                (x_vel_t >= velThreshMin ? x_vel : 0d) :
+                                (x_vel >= 0d ? velThreshMax : -velThreshMax);
+                        y_vel = (y_vel_t <= velThreshMax) ?
+                                (y_vel_t >= velThreshMin ? y_vel : 0d) :
+                                (x_vel >= 0d ? velThreshMax : -velThreshMax);
+                        z_vel = (z_vel_t <= velThreshMax) ?
+                                (z_vel_t >= velThreshMin ? z_vel : 0d) :
+                                (x_vel >= 0d ? velThreshMax : -velThreshMax);
 
                         double velMag = Math.sqrt(x_vel*x_vel + y_vel*y_vel);
                         if (abaqConst && velMag>0d) {
                             x_vel_t = 0d;
-                            y_vel_t = -velMag;
+                            y_vel_t = -1d * velMag;
                             z_vel_t = 0d;
                             x_vel = x_vel_t * (double)rot[0] + y_vel_t * (double)rot[1] + z_vel_t * (double)rot[2];
                             y_vel = x_vel_t * (double)rot[3] + y_vel_t * (double)rot[4] + z_vel_t * (double)rot[5];
                             z_vel = x_vel_t * (double)rot[6] + y_vel_t * (double)rot[7] + z_vel_t * (double)rot[8];
-                            x_vel = x_vel <= abaqConstVel ? x_vel : abaqConstVel;
-                            y_vel = y_vel <= abaqConstVel ? y_vel : abaqConstVel;
-                            z_vel = z_vel <= abaqConstVel ? z_vel : abaqConstVel;
+                            x_vel = (Math.abs(x_vel) <= abaqConstVel) ?
+                                    x_vel :
+                                    (x_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                            y_vel = (Math.abs(y_vel) <= abaqConstVel) ?
+                                    y_vel :
+                                    (y_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                            z_vel = (Math.abs(z_vel) <= abaqConstVel) ?
+                                    z_vel :
+                                    (z_vel >= 0d ? abaqConstVel : -abaqConstVel);
                         }
 
-                        float[] orientationVals = new float[3];
-                        SensorManager.getOrientation(rot, orientationVals);
-                        double azimuth_t = ((double)orientationVals[0]*180d)/Math.PI;
-                        azimuth_t = azimuth_t < 0 ? azimuth_t + 360 : azimuth_t;
-                        int azimuth = (int)(Math.round(azimuth_t) % 360);
+//                        float[] orientationVals = new float[3];
+//                        SensorManager.getOrientation(rot, orientationVals);
+//                        azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI);
+//                        azimuth = azimuth < 0f ? azimuth + 360f : azimuth;
                         if (listener != null)
                             listener.onTranslation(x_vel, y_vel, z_vel, 1000000d/timeDiff, azimuth);
 
