@@ -8,4 +8,8 @@
     <string name="title_navigation">Navigation</string>
     <string name="title_locations">Locations</string>
     <string name="textview">TextView</string>
+    <string name="pointer_desc">Map pointer</string>
+    <string name="code_region_desc">Camera region</string>
+
+    <string name="scan_to_start">Scan a QR code to start navigating.</string>
 </resources>

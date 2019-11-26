@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.util.Log;
@@ -15,6 +16,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,6 +38,7 @@ import com.clemcab.diskoverindoors.ui.notifications.NotificationsFragment;
 import com.clemcab.diskoverindoors.ui.notifications.NotificationsViewModel;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
+import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
 
@@ -50,6 +53,7 @@ public class HomeFragment extends Fragment {
     private HomeViewModel homeViewModel;
     private NotificationsViewModel notificationsViewModel;
     private BarcodeDetector barcodeDetector;
+    private FrameLayout cameraFrame;
     private boolean isAlertActive = false;
     private DBHelper db;
 
@@ -57,13 +61,12 @@ public class HomeFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_home, container, false);
         surfaceView = root.findViewById(R.id.camerapreview);
         textView = root.findViewById(R.id.text_home);
-
         notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
         homeViewModel = ViewModelProviders.of(this.getActivity()).get(HomeViewModel.class);
         return root;
     }
     @Override
-    public void onViewCreated (View view, @Nullable Bundle savedInstanceState) {
+    public void onViewCreated (final View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         // initialize barcode reader and camera
@@ -81,16 +84,34 @@ public class HomeFragment extends Fragment {
                 }
                 textView.setText("Scan QR code to start navigating.");
                 try {
-                    android.view.ViewGroup.LayoutParams lp = surfaceView.getLayoutParams();
-                    Log.e("CAMERA", Integer.toString(surfaceView.getHeight()) + " " + Integer.toString(surfaceView.getWidth()));
+                    cameraFrame = getActivity().findViewById(R.id.previewframe);
+                    holder.setKeepScreenOn(true);
+                    int viewHeight = surfaceView.getHeight();
+                    int viewWidth = surfaceView.getWidth();
                     cameraSource = new CameraSource.Builder(getActivity(),barcodeDetector)
-//                          .setRequestedPreviewSize(640,480)
-                            .setRequestedPreviewSize(surfaceView.getWidth(),surfaceView.getHeight())
+                            .setRequestedPreviewSize(viewWidth,viewHeight)
                             .setAutoFocusEnabled(true)
                             .build();
                     cameraSource.start(holder);
-                    holder.setFixedSize(surfaceView.getWidth(),surfaceView.getHeight());
-                    Log.e("CAMERA", Integer.toString(cameraSource.getPreviewSize().getHeight()) + " " + Integer.toString(cameraSource.getPreviewSize().getWidth()));
+                    int camHeight = cameraSource.getPreviewSize().getHeight();
+                    int camWidth = cameraSource.getPreviewSize().getWidth();
+
+                    double viewRatio = (double)viewHeight/(double)viewWidth;
+                    double camRatio = (double)camHeight/(double)camWidth;
+                    boolean isLandscape = camRatio < 1d;
+
+                    double scale = 1d;
+                    if (isLandscape)
+                        scale = (double) viewWidth / (double)camWidth;
+                    else {
+                        if (viewRatio >= camRatio)
+                            scale = (double) viewWidth / (double) camWidth;
+                        else
+                            scale = (double) viewHeight / (double) camHeight;
+                    }
+                    cameraFrame.getLayoutParams().height = (int)Math.floor((double)camHeight * scale);
+                    cameraFrame.getLayoutParams().width = (int)Math.floor((double)camWidth * scale);
+                    cameraFrame.requestLayout();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -98,7 +119,6 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
             }
 
             @Override
@@ -116,30 +136,57 @@ public class HomeFragment extends Fragment {
             @Override
             public void receiveDetections(Detector.Detections<Barcode> detections) {
                 final SparseArray<Barcode> qrCodes = detections.getDetectedItems();
-
+                final int camWidth = cameraFrame.getLayoutParams().width;
+                final int camHeight = cameraFrame.getLayoutParams().height;
                 if (qrCodes.size()!=0) {
-                    final String scannedQRCode = qrCodes.valueAt(0).displayValue;
+                    Barcode centerQR = null;
+                    final int thresh_buffer = (int)Math.floorDiv(camWidth,27);
+                    final int left_thresh = (int)Math.floorDiv(camWidth,3);
+                    final int right_thresh = camWidth - left_thresh;
+                    final int top_thresh = Math.floorDiv(camHeight,2) - Math.floorDiv(left_thresh,2);
+                    final int bottom_thresh = top_thresh + left_thresh;
 
-                    db = ((MainActivity)getActivity()).DBHelper;
+                    final int[] left_range = {left_thresh-thresh_buffer, left_thresh+thresh_buffer};
+                    final int[] top_range = {top_thresh-thresh_buffer, top_thresh+thresh_buffer};
+                    final int[] right_range = {right_thresh-thresh_buffer, right_thresh+thresh_buffer};
+                    final int[] bottom_range = {bottom_thresh-thresh_buffer, bottom_thresh+thresh_buffer};
 
-                    getActivity().runOnUiThread(new Runnable(){
-                        @Override
-                        public void run() {
-                            if (db.codeExists(scannedQRCode)) {
-                                if (!isAlertActive) {
-                                    displayAlert(scannedQRCode);
-                                    isAlertActive = true;
-                                    cameraSource.stop();
-                                }
-                            } else {
-                                if (toast != null){
-                                    toast.cancel();
-                                }
-                                toast = Toast.makeText(getActivity(), "Invalid QR Code: " + scannedQRCode, Toast.LENGTH_SHORT);
-                                toast.show();
-                            }
+                    for (int i=0; i<qrCodes.size(); i++) {
+                        Rect bound = qrCodes.valueAt(i).getBoundingBox();
+                        boolean inRange = true;
+                        inRange = inRange && (bound.left >= left_range[0]) && (bound.left <= left_range[1]);
+                        inRange = inRange && (bound.top >= top_range[0]) && (bound.top <= top_range[1]);
+                        inRange = inRange && (bound.right >= right_range[0]) && (bound.right <= right_range[1]);
+                        inRange = inRange && (bound.bottom >= bottom_range[0]) && (bound.bottom <= bottom_range[1]);
+
+                        if (inRange) {
+                            centerQR = qrCodes.valueAt(i);
                         }
-                    });
+                    }
+                    if (centerQR != null) {
+                        final String scannedQRCode = centerQR.displayValue;
+
+                        db = ((MainActivity) getActivity()).DBHelper;
+
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (db.codeExists(scannedQRCode)) {
+                                    if (!isAlertActive) {
+                                        displayAlert(scannedQRCode);
+                                        isAlertActive = true;
+                                        cameraSource.stop();
+                                    }
+                                } else {
+                                    if (toast != null) {
+                                        toast.cancel();
+                                    }
+                                    toast = Toast.makeText(getActivity(), "Invalid QR Code: " + scannedQRCode, Toast.LENGTH_SHORT);
+                                    toast.show();
+                                }
+                            }
+                        });
+                    }
                 }
             }
         });
