@@ -45,7 +45,7 @@ public class CustomAdapter extends BaseAdapter {
         view = inflater.inflate(R.layout.location_list, null);
         TextView room = view.findViewById(R.id.textView);
 
-        room.setText(indoorLocationList.get(i).title);
+        room.setText(indoorLocationList.get(i).title + " " + indoorLocationList.get(i).subtitle);
 
         return view;
     }
