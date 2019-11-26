@@ -120,6 +120,7 @@ public class HomeFragment extends Fragment {
                                 if (!isAlertActive) {
                                     displayAlert(scannedQRCode);
                                     isAlertActive = true;
+                                    cameraSource.stop();
                                 }
                             } else {
                                 if (toast != null){
@@ -149,9 +150,12 @@ public class HomeFragment extends Fragment {
                 "Choose Destination",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        Navigation.findNavController(getView()).navigate(R.id.action_select_destination);
-                        homeViewModel.setQrCode(qrCode);
-                        isAlertActive = false;
+                        View currView = getView();
+                        if (currView != null && isAlertActive) {
+                            Navigation.findNavController(currView).navigate(R.id.action_select_destination);
+                            homeViewModel.setQrCode(qrCode);
+                            isAlertActive = false;
+                        }
                     }
                 });
 
@@ -161,6 +165,11 @@ public class HomeFragment extends Fragment {
                     public void onClick(DialogInterface dialog, int id) {
                         dialog.cancel();
                         isAlertActive = false;
+                        try {
+                            cameraSource.start(surfaceView.getHolder());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 });
         AlertDialog navigateDialog = builder1.create();
