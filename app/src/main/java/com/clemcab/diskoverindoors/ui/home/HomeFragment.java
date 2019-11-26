@@ -141,7 +141,28 @@ public class HomeFragment extends Fragment {
         builder1.setTitle("Navigate");
 
         String[] args = qrCode.split("::",0);
-        String message = "You are currently at " + args[0] + ".";
+        String building = args[0];
+        String room = args[2];
+        String level;
+        switch (args[1]){
+            case "1":
+                level = "lower ground floor";
+                break;
+            case "2":
+                level = "1st floor";
+                break;
+            case "3":
+                level = "2nd floor";
+                break;
+            case "4":
+                level = "3rd floor";
+                break;
+            default:
+                level = null;
+        }
+
+
+        String message = "You are at " + room + ", " + level + " of " + building;
         builder1.setMessage(message);
 
         builder1.setCancelable(true);
