@@ -9,9 +9,13 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.clemcab.diskoverindoors.R;
+import com.clemcab.diskoverindoors.ui.home.HomeViewModel;
+import com.clemcab.diskoverindoors.ui.notifications.NavigationData;
+import com.clemcab.diskoverindoors.ui.notifications.NotificationsViewModel;
 
 public class DashboardFragment extends Fragment {
 
@@ -19,6 +23,14 @@ public class DashboardFragment extends Fragment {
     private Accelerometer accelerometer;
 
     private ImageView map_pointer;
+    private NotificationsViewModel notificationsViewModel;
+
+    private float start_x;
+    private float start_y;
+    private float start_floor;
+    private float dest_x;
+    private float dest_y;
+    private float dest_floor;
 
 //    @Override
 //    public void onCreate() {
@@ -36,6 +48,25 @@ public class DashboardFragment extends Fragment {
         accelerometer = new Accelerometer(getActivity());
         final TextView textViewAccel = root.findViewById(R.id.textViewAccel);
 
+        notificationsViewModel = ViewModelProviders.of(this.getActivity()).get(NotificationsViewModel.class);
+        if (notificationsViewModel.navData != null) {
+            notificationsViewModel.navData.observe(this, new Observer<NavigationData>() {
+                @Override
+                public void onChanged(NavigationData navData) {
+                    start_x = navData.start_x;
+                    start_y = navData.start_y;
+                    start_floor = navData.start_floor;
+                    dest_x = navData.dest_x;
+                    dest_y = navData.dest_y;
+                    dest_floor = navData.dest_floor;
+
+                    String test = " Start: (" + start_x + ", " + start_y + ") floor " + start_floor + "\n" +
+                            " Destination: (" + dest_x + ", " + dest_y + ") floor " + dest_floor + "\n";
+                    textViewAccel.setText(test);
+                }
+            });
+        }
+
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
             public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, float azimuth) {
@@ -44,17 +75,18 @@ public class DashboardFragment extends Fragment {
                 float y_coord = map_pointer.getY();
                 double deltaX = (x_vel*multiplier)/timeDiff;
                 double deltaY = (y_vel*multiplier)/timeDiff;
-                String text = "Accelerometer Readings:\n" +
-                              "x_vel = " + x_vel + " m/s\n " +
-                              "y_vel = " + y_vel + " m/s\n " +
-                              "z_vel = " + z_vel + " m/s\n " +
-                              "timeDiff = " + timeDiff + " Hz\n " +
-                              "x - " + x_coord + "\n" +
-                              "y - " + y_coord + "\n" +
-                              "azimuth = " + azimuth;
+
                 map_pointer.setX(x_coord - (float)deltaX);
                 map_pointer.setY(y_coord + (float)deltaY);
-                textViewAccel.setText(text);
+//                String text = "Accelerometer Readings:\n" +
+//                              "x_vel = " + x_vel + " m/s\n " +
+//                              "y_vel = " + y_vel + " m/s\n " +
+//                              "z_vel = " + z_vel + " m/s\n " +
+//                              "timeDiff = " + timeDiff + " Hz\n " +
+//                              "x - " + x_coord + "\n" +
+//                              "y - " + y_coord + "\n" +
+//                              "azimuth = " + azimuth;
+//                textViewAccel.setText(text);
             }
             @Override
             public void onRotation(float azimuth) {

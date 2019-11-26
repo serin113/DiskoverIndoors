@@ -5,8 +5,11 @@ import android.widget.TextView;
 
 import com.clemcab.diskoverindoors.ui.dashboard.Accelerometer;
 import com.clemcab.diskoverindoors.DBHelper;
+import com.clemcab.diskoverindoors.ui.home.HomeViewModel;
+import com.clemcab.diskoverindoors.ui.notifications.NotificationsViewModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -15,6 +18,8 @@ import androidx.navigation.ui.NavigationUI;
 public class MainActivity extends AppCompatActivity {
     public Accelerometer Accelerometer;
     public DBHelper DBHelper;
+    public HomeViewModel homeViewModel;
+    public NotificationsViewModel notificationsViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,5 +37,7 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupWithNavController(navView, navController);
         Accelerometer = new Accelerometer(this);
         DBHelper = new DBHelper(this);
+//        homeViewModel = ViewModelProviders.of(this).get(HomeViewModel.class);
+//        notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
     }
 }

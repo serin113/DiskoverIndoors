@@ -29,6 +29,7 @@ public class NotificationsFragment extends Fragment {
     private List<IndoorLocation> indoorLocationList;
     private Float[] startingCoords;
     private ListView listView;
+    private Fragment fragment = this;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
@@ -42,9 +43,13 @@ public class NotificationsFragment extends Fragment {
             @Override
             public void onChanged(@Nullable String qrCode) {
                 scannedQrCode = qrCode;
+                String[] args = scannedQrCode.split("::");
+                int startingLevel = Integer.parseInt(args[1]);
                 startingCoords = db.getCoordsFromCode(scannedQrCode);
                 indoorLocationList = db.getRoomList(scannedQrCode);
-                CustomAdapter customAdapter = new CustomAdapter(getContext(), indoorLocationList);
+
+
+                CustomAdapter customAdapter = new CustomAdapter(fragment, getContext(), indoorLocationList, startingLevel, startingCoords);
                 listView.setAdapter(customAdapter);
             }
         });

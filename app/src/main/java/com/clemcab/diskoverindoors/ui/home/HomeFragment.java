@@ -33,6 +33,7 @@ import com.clemcab.diskoverindoors.DBHelper;
 import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
 import com.clemcab.diskoverindoors.ui.notifications.NotificationsFragment;
+import com.clemcab.diskoverindoors.ui.notifications.NotificationsViewModel;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
@@ -47,16 +48,17 @@ public class HomeFragment extends Fragment {
     private SurfaceView surfaceView;
     private CameraSource cameraSource;
     private HomeViewModel homeViewModel;
+    private NotificationsViewModel notificationsViewModel;
     private BarcodeDetector barcodeDetector;
     private boolean isAlertActive = false;
     private DBHelper db;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        homeViewModel = ViewModelProviders.of(this).get(HomeViewModel.class);
         View root = inflater.inflate(R.layout.fragment_home, container, false);
         surfaceView = root.findViewById(R.id.camerapreview);
         textView = root.findViewById(R.id.text_home);
 
+        notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
         homeViewModel = ViewModelProviders.of(this.getActivity()).get(HomeViewModel.class);
         return root;
     }
@@ -148,7 +150,28 @@ public class HomeFragment extends Fragment {
         builder1.setTitle("Navigate");
 
         String[] args = qrCode.split("::",0);
-        String message = "You are currently at " + args[0] + ".";
+        String building = args[0];
+        String room = args[2];
+        String level;
+        switch (args[1]){
+            case "1":
+                level = "lower ground floor";
+                break;
+            case "2":
+                level = "1st floor";
+                break;
+            case "3":
+                level = "2nd floor";
+                break;
+            case "4":
+                level = "3rd floor";
+                break;
+            default:
+                level = null;
+        }
+
+
+        String message = "You are at " + room + ", " + level + " of " + building;
         builder1.setMessage(message);
 
         builder1.setCancelable(true);

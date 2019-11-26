@@ -1,6 +1,7 @@
 package com.clemcab.diskoverindoors.ui.notifications;
 
 public class NavigationData {
+    public String building;
     public float start_x;
     public float start_y;
     public int start_floor;
@@ -8,7 +9,8 @@ public class NavigationData {
     public float dest_y;
     public int dest_floor;
 
-    NavigationData (float start_x, float start_y, int start_floor, float dest_x, float dest_y, int dest_floor) {
+    NavigationData (String building, float start_x, float start_y, int start_floor, float dest_x, float dest_y, int dest_floor) {
+        this.building = building;
         this.start_x = start_x;
         this.start_y = start_y;
         this.start_floor = start_floor;
