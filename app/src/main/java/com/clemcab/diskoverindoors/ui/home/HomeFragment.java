@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.util.Log;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
@@ -66,22 +67,28 @@ public class HomeFragment extends Fragment {
         // initialize barcode reader and camera
         barcodeDetector = new BarcodeDetector.Builder(getActivity())
                 .setBarcodeFormats(Barcode.QR_CODE).build();
-        cameraSource = new CameraSource.Builder(getActivity(),barcodeDetector)
-                .setRequestedPreviewSize(640,480)
-                .setAutoFocusEnabled(true)
-                .build();
+
         // initialize surface view for the camera
         surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
                 if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(getActivity(), new String[] {Manifest.permission.CAMERA}, 100);
-                    textView.setText("Camera access is important to be able to scan QR codes.");
+                    textView.setText("Camera access is required to scan QR codes.");
                     return;
                 }
-                textView.setText("Scan QR code to recalibrate your position.");
+                textView.setText("Scan QR code to start navigating.");
                 try {
+                    android.view.ViewGroup.LayoutParams lp = surfaceView.getLayoutParams();
+                    Log.e("CAMERA", Integer.toString(surfaceView.getHeight()) + " " + Integer.toString(surfaceView.getWidth()));
+                    cameraSource = new CameraSource.Builder(getActivity(),barcodeDetector)
+//                          .setRequestedPreviewSize(640,480)
+                            .setRequestedPreviewSize(surfaceView.getWidth(),surfaceView.getHeight())
+                            .setAutoFocusEnabled(true)
+                            .build();
                     cameraSource.start(holder);
+                    holder.setFixedSize(surfaceView.getWidth(),surfaceView.getHeight());
+                    Log.e("CAMERA", Integer.toString(cameraSource.getPreviewSize().getHeight()) + " " + Integer.toString(cameraSource.getPreviewSize().getWidth()));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
