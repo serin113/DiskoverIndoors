@@ -17,6 +17,7 @@ import androidx.navigation.Navigation;
 import com.clemcab.diskoverindoors.IndoorLocation;
 import com.clemcab.diskoverindoors.R;
 import com.clemcab.diskoverindoors.ui.home.HomeViewModel;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.util.List;
 import java.util.Observer;
@@ -30,6 +31,7 @@ public class CustomAdapter extends BaseAdapter {
     LayoutInflater inflater;
     NotificationsViewModel viewModel;
     Fragment fragment;
+    BottomNavigationView bottomNavigationView;
 
     public CustomAdapter(Fragment fragment, Context applicationContext, List<IndoorLocation> indoorLocationList, int startingLevel, Float[] startingCoords) {
         this.context = applicationContext;
@@ -39,6 +41,8 @@ public class CustomAdapter extends BaseAdapter {
         this.start_y = startingCoords[1];
         inflater = (LayoutInflater.from(applicationContext));
         this.fragment = fragment;
+
+        bottomNavigationView = fragment.getActivity().findViewById(R.id.nav_view);
 
         this.viewModel = ViewModelProviders.of(fragment.getActivity()).get(NotificationsViewModel.class);
     }
@@ -65,6 +69,7 @@ public class CustomAdapter extends BaseAdapter {
             NavigationData navData = (NavigationData) v.getTag();
             if (navData != null) {
                 viewModel.setNavData(navData);
+                bottomNavigationView.getMenu().getItem(0).setEnabled(false);
                 Navigation.findNavController(fragment.getView()).navigate(R.id.action_list_select);
             }
         }

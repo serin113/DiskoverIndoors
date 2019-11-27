@@ -38,6 +38,8 @@ import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
+import com.google.android.material.bottomnavigation.BottomNavigationItemView;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.io.IOException;
 
@@ -52,12 +54,16 @@ public class HomeFragment extends Fragment {
     private BarcodeDetector barcodeDetector;
     private boolean isAlertActive = false;
     private DBHelper db;
+    private View navigationButton;
+    private View locationButton;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_home, container, false);
         surfaceView = root.findViewById(R.id.camerapreview);
         textView = root.findViewById(R.id.text_home);
 
+        navigationButton = getActivity().findViewById(R.id.navigation_navigation);
+        locationButton = getActivity().findViewById(R.id.navigation_locations);
         notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
         homeViewModel = ViewModelProviders.of(this.getActivity()).get(HomeViewModel.class);
         return root;
@@ -182,8 +188,10 @@ public class HomeFragment extends Fragment {
                     public void onClick(DialogInterface dialog, int id) {
                         View currView = getView();
                         if (currView != null && isAlertActive) {
-                            Navigation.findNavController(currView).navigate(R.id.action_select_destination);
                             homeViewModel.setQrCode(qrCode);
+                            navigationButton.setEnabled(true);
+                            locationButton.setEnabled(true);
+                            Navigation.findNavController(currView).navigate(R.id.action_select_destination);
                             isAlertActive = false;
                         }
                     }
