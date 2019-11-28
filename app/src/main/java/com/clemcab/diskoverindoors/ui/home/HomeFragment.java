@@ -105,11 +105,18 @@ public class HomeFragment extends Fragment {
                     holder.setKeepScreenOn(true);
                     int viewHeight = cameraFrame.getMeasuredHeight();
                     int viewWidth = cameraFrame.getMeasuredWidth();
-                    cameraSource = new CameraSource.Builder(getActivity(),barcodeDetector)
+
+                    CameraSource.Builder cameraSourceBuilder = new CameraSource.Builder(getActivity(),barcodeDetector)
                             .setFacing(CameraSource.CAMERA_FACING_BACK)
-                            .setRequestedPreviewSize(viewWidth,viewHeight)
-                            .setAutoFocusEnabled(true)
-                            .build();
+                            .setAutoFocusEnabled(true);
+
+                    if ((double)viewHeight/(double)viewWidth >= 1) {
+                        cameraSourceBuilder = cameraSourceBuilder.setRequestedPreviewSize(720,1000);
+                    } else {
+                        cameraSourceBuilder = cameraSourceBuilder.setRequestedPreviewSize(1000,720);
+                    }
+
+                    cameraSource = cameraSourceBuilder.build();
                     cameraSource.start(holder);
                     int camHeight = cameraSource.getPreviewSize().getHeight();
                     int camWidth = cameraSource.getPreviewSize().getWidth();
@@ -125,20 +132,17 @@ public class HomeFragment extends Fragment {
                     int newWidth = (int)Math.floor((double)camWidth * scale);
                     surfaceViewHeight = newHeight;
                     surfaceViewWidth = newWidth;
-                    Log.e("DIM_FRAME", intsCon(viewWidth,viewHeight));
-                    Log.e("DIM_SUGG", intsCon(camWidth,camHeight));
-                    Log.e("DIM_RATIO_FS", intsCon(viewRatio, camRatio));
-                    Log.e("DIM_SCALE", Double.toString(scale));
-                    Log.e("DIM_SURFACE", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
-                    Log.e("DIM_NEW", intsCon(newWidth,newHeight));
-//                    surfaceView.getLayoutParams().height = newHeight;
-//                    surfaceView.getLayoutParams().width = newWidth;
-//                    surfaceView.requestLayout();
+//                    Log.e("DIM_FRAME", intsCon(viewWidth,viewHeight));
+//                    Log.e("DIM_SUGG", intsCon(camWidth,camHeight));
+//                    Log.e("DIM_RATIO_FS", intsCon(viewRatio, camRatio));
+//                    Log.e("DIM_SCALE", Double.toString(scale));
+//                    Log.e("DIM_SURFACE", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
+//                    Log.e("DIM_NEW", intsCon(newWidth,newHeight));
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Log.e("NOPE_SURFACE_OLD", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
-                            Log.e("NOPE_FRAME_OLD", intsCon(cameraFrame.getMeasuredWidth(),cameraFrame.getMeasuredHeight()));
+//                            Log.e("NOPE_SURFACE_OLD", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
+//                            Log.e("NOPE_FRAME_OLD", intsCon(cameraFrame.getMeasuredWidth(),cameraFrame.getMeasuredHeight()));
                             surfaceView.getHolder().setFixedSize(surfaceViewWidth,surfaceViewHeight);
 //                            cameraFrame.getLayoutParams().width = surfaceViewWidth;
 //                            cameraFrame.getLayoutParams().height = surfaceViewHeight;
@@ -148,11 +152,11 @@ public class HomeFragment extends Fragment {
                             surfaceView.getLayoutParams().height = surfaceViewHeight;
                             surfaceView.invalidate();
                             surfaceView.requestLayout();
-                            Log.e("NOPE_SURFACE_NEW", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
-                            Log.e("NOPE_FRAME_NEW", intsCon(cameraFrame.getMeasuredWidth(),cameraFrame.getMeasuredHeight()));
+//                            Log.e("NOPE_SURFACE_NEW", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
+//                            Log.e("NOPE_FRAME_NEW", intsCon(cameraFrame.getMeasuredWidth(),cameraFrame.getMeasuredHeight()));
                         }
                     });
-                    Log.e("DIM_SURFACE_F", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
+//                    Log.e("DIM_SURFACE_F", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -182,10 +186,8 @@ public class HomeFragment extends Fragment {
                 if (qrCodes.size()!=0) {
                     Barcode centerQR = null;
 
-                    final int buffer_div = 27;
+                    final int buffer_div = 7;
 
-//                    int camWidth = surfaceView.getMeasuredWidth();
-//                    int camHeight = surfaceView.getMeasuredHeight();
                     int camHeight = cameraSource.getPreviewSize().getHeight();
                     int camWidth = cameraSource.getPreviewSize().getWidth();
                     int viewHeight = surfaceView.getMeasuredHeight();
@@ -196,20 +198,26 @@ public class HomeFragment extends Fragment {
                     double camRatio = (double)camHeight/(double)camWidth;
                     double viewRatio = (double)viewHeight/(double)viewWidth;
                     double scale = 1d;
+                    int visibleHeight_scaled = 0;
+                    int visibleWidth_scaled = 0;
                     if (viewRatio < camRatio) {
-                        scale = (double) viewWidth / (double) camWidth;
+                        scale = (double) camWidth / (double) visibleWidth;
+                        visibleWidth_scaled = camWidth;
+                        visibleHeight_scaled = (int)Math.floor((double)visibleHeight * scale);
                     } else {
-                        scale = (double) viewHeight / (double) camHeight;
+                        scale = (double) camHeight / (double) visibleHeight;
+                        visibleWidth_scaled = (int)Math.floor((double)visibleWidth * scale);
+                        visibleHeight_scaled = camHeight;
                     }
 
 
-                    Log.e("RANGE_","============================");
-                    Log.e("RANGE_SURFACE", intsCon(surfaceView.getMeasuredWidth(), surfaceView.getMeasuredHeight()));
-                    Log.e("RANGE_CAMERASOURCE", intsCon(cameraSource.getPreviewSize().getWidth(), cameraSource.getPreviewSize().getHeight()));
-                    Log.e("RANGE_VISIBLEFRAME", intsCon(visibleWidth, visibleHeight));
-                    Log.e("RANGE_VR_CR", intsCon(viewRatio,camRatio));
-                    Log.e("RANGE_VR<CR", Boolean.toString(viewRatio < camRatio));
-                    Log.e("RANGE_SCALE", Double.toString(scale));
+//                    Log.e("RANGE_","============================");
+//                    Log.e("RANGE_SURFACE", intsCon(surfaceView.getMeasuredWidth(), surfaceView.getMeasuredHeight()));
+//                    Log.e("RANGE_CAMERASOURCE", intsCon(cameraSource.getPreviewSize().getWidth(), cameraSource.getPreviewSize().getHeight()));
+//                    Log.e("RANGE_VISIBLEFRAME", intsCon(visibleWidth, visibleHeight));
+//                    Log.e("RANGE_VR_CR", intsCon(viewRatio,camRatio));
+//                    Log.e("RANGE_VR<CR", Boolean.toString(viewRatio < camRatio));
+//                    Log.e("RANGE_SCALE", Double.toString(scale));
 
                     int thresh_buffer, left_thresh, right_thresh, top_thresh, bottom_thresh;
                     int[] left_range = new int[2];
@@ -218,48 +226,23 @@ public class HomeFragment extends Fragment {
                     int[] bottom_range = new int[2];
 
                     if (viewRatio < camRatio) {
-                        thresh_buffer = (int) Math.floorDiv(camWidth, buffer_div);
-                        left_thresh = (int) Math.floorDiv(camWidth, 3);
-                        right_thresh = camWidth - left_thresh;
-                        top_thresh = Math.floorDiv(camHeight, 2) - Math.floorDiv(left_thresh, 2);
-                        bottom_thresh = top_thresh + left_thresh;
+                        int t = Math.floorDiv((camHeight - visibleHeight_scaled), 2);
+                        int b = camHeight - t;
+                        int third = Math.floorDiv(b - t, 3);
+                        top_thresh = t + third;
+                        bottom_thresh = b - third;
+                        left_thresh = Math.floorDiv(camWidth, 2) - Math.floorDiv(third, 2);
+                        right_thresh = left_thresh + third;
+                        thresh_buffer = Math.floorDiv(third, buffer_div);
                     } else {
-                        thresh_buffer = (int) Math.floorDiv(camHeight, buffer_div);
-                        top_thresh = (int) Math.floorDiv(camHeight, 3);
-                        bottom_thresh = camHeight - top_thresh;
-                        left_thresh = Math.floorDiv(camWidth, 2) - Math.floorDiv(top_thresh, 2);
-                        right_thresh = left_thresh + top_thresh;
-                    }
-
-                    thresh_buffer = (int)Math.floor((double)thresh_buffer * scale);
-                    left_thresh = (int)Math.floor((double)left_thresh * scale);
-                    right_thresh = (int)Math.floor((double)right_thresh * scale);
-                    top_thresh = (int)Math.floor((double)top_thresh * scale);
-                    bottom_thresh = (int)Math.floor((double)bottom_thresh * scale);
-                    int visibleHeight_scaled = (int)Math.floor((double)visibleHeight * scale);
-                    int visibleWidth_scaled = (int)Math.floor((double)visibleWidth * scale);
-                    double shift = 0;
-//                    double shift = 0;
-                    Log.e("RANGE_VIS_SCALED", intsCon(visibleWidth_scaled,visibleHeight_scaled));
-
-                    if (viewRatio < camRatio) {
-                        shift = 0.5d * Math.abs((double)(viewHeight-visibleHeight_scaled));
-                        top_thresh = (int)Math.floor(
-                                (double)top_thresh + shift
-                        );
-                        bottom_thresh = (int)Math.floor(
-                                (double)bottom_thresh + shift
-                        );
-                        Log.e("RANGE_SHIFT_VERT", Double.toString(shift));
-                    } else {
-                        shift = 0.5d * Math.abs((double)(viewWidth-visibleWidth_scaled));
-                        left_thresh = (int)Math.floor(
-                                (double)left_thresh + shift
-                        );
-                        right_thresh = (int)Math.floor(
-                                (double)right_thresh + shift
-                        );
-                        Log.e("RANGE_SHIFT_HORI", Double.toString(shift));
+                        int l = Math.floorDiv((camWidth - visibleWidth_scaled), 2);
+                        int r = camWidth - l;
+                        int third = Math.floorDiv(r - l,3);
+                        left_thresh = l + third;
+                        right_thresh = r - third;
+                        top_thresh = Math.floorDiv(camHeight, 2) - Math.floorDiv(third, 2);
+                        bottom_thresh = top_thresh + third;
+                        thresh_buffer = Math.floorDiv(third, buffer_div);
                     }
 
                     left_range[0] = left_thresh;
@@ -273,19 +256,15 @@ public class HomeFragment extends Fragment {
 
                     for (int i=0; i<qrCodes.size(); i++) {
                         Rect bound = qrCodes.valueAt(i).getBoundingBox();
-                        bound.left = (int)Math.floor((double)bound.left * scale);
-                        bound.right = (int)Math.floor((double)bound.right * scale);
-                        bound.top = (int)Math.floor((double)bound.top * scale);
-                        bound.bottom = (int)Math.floor((double)bound.bottom * scale);
                         boolean inRange = (bound.left >= left_range[0]) && (bound.left <= left_range[1]);
                         inRange = inRange && (bound.top >= top_range[0]) && (bound.top <= top_range[1]);
                         inRange = inRange && (bound.right >= right_range[0]) && (bound.right <= right_range[1]);
                         inRange = inRange && (bound.bottom >= bottom_range[0]) && (bound.bottom <= bottom_range[1]);
-                        Log.e("RANGE_LT", intsCon(bound.left, bound.top));
-                        Log.e("RANGE_RB", intsCon(bound.right, bound.bottom));
-                        Log.e("RANGE_THRESH_BUF", Integer.toString(thresh_buffer));
-                        Log.e("RANGE_THRESH_LT", intsCon(left_range[0],top_range[0]));
-                        Log.e("RANGE_THRESH_RB", intsCon(right_range[1],bottom_range[1]));
+//                        Log.e("RANGE_LT", intsCon(bound.left, bound.top));
+//                        Log.e("RANGE_RB", intsCon(bound.right, bound.bottom));
+//                        Log.e("RANGE_THRESH_BUF", Integer.toString(thresh_buffer));
+//                        Log.e("RANGE_THRESH_LT", intsCon(left_range[0],top_range[0]));
+//                        Log.e("RANGE_THRESH_RB", intsCon(right_range[1],bottom_range[1]));
 //                        Log.e("RANGE_IN_L", Boolean.toString((bound.left >= left_range[0]) && (bound.left <= left_range[1])));
 //                        Log.e("RANGE_IN_T", Boolean.toString((bound.top >= top_range[0]) && (bound.top <= top_range[1])));
 //                        Log.e("RANGE_IN_R", Boolean.toString((bound.right >= right_range[0]) && (bound.right <= right_range[1])));
@@ -312,7 +291,7 @@ public class HomeFragment extends Fragment {
                                     if (toast != null) {
                                         toast.cancel();
                                     }
-                                    toast = Toast.makeText(getActivity(), "Invalid QR Code: " + scannedQRCode, Toast.LENGTH_SHORT);
+                                    toast = Toast.makeText(getActivity(), "Invalid QR code: " + scannedQRCode, Toast.LENGTH_SHORT);
                                     toast.show();
                                 }
                             }
