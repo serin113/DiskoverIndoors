@@ -46,6 +46,8 @@ import java.io.IOException;
 
 public class HomeFragment extends Fragment {
 
+    final private boolean restrictSquare = false;
+
     private TextView textView;
     private Toast toast = null;
     private SurfaceView surfaceView;
@@ -115,7 +117,7 @@ public class HomeFragment extends Fragment {
                     double viewRatio = (double)viewHeight/(double)viewWidth;
                     double camRatio = (double)camHeight/(double)camWidth;
                     double scale = 1d;
-                    if (viewRatio >= camRatio)
+                    if (viewRatio < camRatio)
                         scale = (double) viewWidth / (double) camWidth;
                     else
                         scale = (double) viewHeight / (double) camHeight;
@@ -136,18 +138,18 @@ public class HomeFragment extends Fragment {
                         @Override
                         public void run() {
                             Log.e("NOPE_SURFACE_OLD", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
-
+                            Log.e("NOPE_FRAME_OLD", intsCon(cameraFrame.getMeasuredWidth(),cameraFrame.getMeasuredHeight()));
                             surfaceView.getHolder().setFixedSize(surfaceViewWidth,surfaceViewHeight);
-
 //                            cameraFrame.getLayoutParams().width = surfaceViewWidth;
 //                            cameraFrame.getLayoutParams().height = surfaceViewHeight;
 //                            cameraFrame.invalidate();
 //                            cameraFrame.requestLayout();
-//                            surfaceView.getLayoutParams().width = surfaceViewWidth;
-//                            surfaceView.getLayoutParams().height = surfaceViewHeight;
-//                            surfaceView.invalidate();
-//                            surfaceView.requestLayout();
+                            surfaceView.getLayoutParams().width = surfaceViewWidth;
+                            surfaceView.getLayoutParams().height = surfaceViewHeight;
+                            surfaceView.invalidate();
+                            surfaceView.requestLayout();
                             Log.e("NOPE_SURFACE_NEW", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
+                            Log.e("NOPE_FRAME_NEW", intsCon(cameraFrame.getMeasuredWidth(),cameraFrame.getMeasuredHeight()));
                         }
                     });
                     Log.e("DIM_SURFACE_F", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
@@ -188,15 +190,26 @@ public class HomeFragment extends Fragment {
                     int camWidth = cameraSource.getPreviewSize().getWidth();
                     int viewHeight = surfaceView.getMeasuredHeight();
                     int viewWidth = surfaceView.getMeasuredWidth();
+                    int visibleHeight = cameraFrame.getMeasuredHeight();
+                    int visibleWidth = cameraFrame.getMeasuredWidth();
 
                     double camRatio = (double)camHeight/(double)camWidth;
                     double viewRatio = (double)viewHeight/(double)viewWidth;
                     double scale = 1d;
-                    if (viewRatio >= camRatio)
+                    if (viewRatio < camRatio) {
                         scale = (double) viewWidth / (double) camWidth;
-                    else
+                    } else {
                         scale = (double) viewHeight / (double) camHeight;
-//                    Log.e("RANGE_SCALE", Double.toString(scale));
+                    }
+
+
+                    Log.e("RANGE_","============================");
+                    Log.e("RANGE_SURFACE", intsCon(surfaceView.getMeasuredWidth(), surfaceView.getMeasuredHeight()));
+                    Log.e("RANGE_CAMERASOURCE", intsCon(cameraSource.getPreviewSize().getWidth(), cameraSource.getPreviewSize().getHeight()));
+                    Log.e("RANGE_VISIBLEFRAME", intsCon(visibleWidth, visibleHeight));
+                    Log.e("RANGE_VR_CR", intsCon(viewRatio,camRatio));
+                    Log.e("RANGE_VR<CR", Boolean.toString(viewRatio < camRatio));
+                    Log.e("RANGE_SCALE", Double.toString(scale));
 
                     int thresh_buffer, left_thresh, right_thresh, top_thresh, bottom_thresh;
                     int[] left_range = new int[2];
@@ -204,7 +217,7 @@ public class HomeFragment extends Fragment {
                     int[] top_range = new int[2];
                     int[] bottom_range = new int[2];
 
-                    if (camRatio >= 1d) {
+                    if (viewRatio < camRatio) {
                         thresh_buffer = (int) Math.floorDiv(camWidth, buffer_div);
                         left_thresh = (int) Math.floorDiv(camWidth, 3);
                         right_thresh = camWidth - left_thresh;
@@ -223,6 +236,31 @@ public class HomeFragment extends Fragment {
                     right_thresh = (int)Math.floor((double)right_thresh * scale);
                     top_thresh = (int)Math.floor((double)top_thresh * scale);
                     bottom_thresh = (int)Math.floor((double)bottom_thresh * scale);
+                    int visibleHeight_scaled = (int)Math.floor((double)visibleHeight * scale);
+                    int visibleWidth_scaled = (int)Math.floor((double)visibleWidth * scale);
+                    double shift = 0;
+//                    double shift = 0;
+                    Log.e("RANGE_VIS_SCALED", intsCon(visibleWidth_scaled,visibleHeight_scaled));
+
+                    if (viewRatio < camRatio) {
+                        shift = 0.5d * Math.abs((double)(viewHeight-visibleHeight_scaled));
+                        top_thresh = (int)Math.floor(
+                                (double)top_thresh + shift
+                        );
+                        bottom_thresh = (int)Math.floor(
+                                (double)bottom_thresh + shift
+                        );
+                        Log.e("RANGE_SHIFT_VERT", Double.toString(shift));
+                    } else {
+                        shift = 0.5d * Math.abs((double)(viewWidth-visibleWidth_scaled));
+                        left_thresh = (int)Math.floor(
+                                (double)left_thresh + shift
+                        );
+                        right_thresh = (int)Math.floor(
+                                (double)right_thresh + shift
+                        );
+                        Log.e("RANGE_SHIFT_HORI", Double.toString(shift));
+                    }
 
                     left_range[0] = left_thresh;
                     left_range[1] = left_thresh + thresh_buffer;
@@ -239,20 +277,15 @@ public class HomeFragment extends Fragment {
                         bound.right = (int)Math.floor((double)bound.right * scale);
                         bound.top = (int)Math.floor((double)bound.top * scale);
                         bound.bottom = (int)Math.floor((double)bound.bottom * scale);
-                        boolean inRange = true;
-                        inRange = inRange && (bound.left >= left_range[0]) && (bound.left <= left_range[1]);
+                        boolean inRange = (bound.left >= left_range[0]) && (bound.left <= left_range[1]);
                         inRange = inRange && (bound.top >= top_range[0]) && (bound.top <= top_range[1]);
                         inRange = inRange && (bound.right >= right_range[0]) && (bound.right <= right_range[1]);
                         inRange = inRange && (bound.bottom >= bottom_range[0]) && (bound.bottom <= bottom_range[1]);
-//                        Log.e("RANGE_","============================");
-//                        Log.e("RANGE", intsCon(surfaceView.getMeasuredWidth(), surfaceView.getMeasuredHeight()));
-//                        Log.e("RANGE_C", intsCon(cameraFrame.getMeasuredWidth(), cameraFrame.getMeasuredHeight()));
-//                        Log.e("RANGE_CA", intsCon(cameraSource.getPreviewSize().getWidth(), cameraSource.getPreviewSize().getHeight()));
-//                        Log.e("RANGE_LT", intsCon(bound.left, bound.top));
-//                        Log.e("RANGE_RB", intsCon(bound.right, bound.bottom));
-//                        Log.e("RANGE_THRESH_BUF", Integer.toString(thresh_buffer));
-//                        Log.e("RANGE_THRESH_LT", intsCon(left_range[0],top_range[0]));
-//                        Log.e("RANGE_THRESH_RB", intsCon(right_range[1],bottom_range[1]));
+                        Log.e("RANGE_LT", intsCon(bound.left, bound.top));
+                        Log.e("RANGE_RB", intsCon(bound.right, bound.bottom));
+                        Log.e("RANGE_THRESH_BUF", Integer.toString(thresh_buffer));
+                        Log.e("RANGE_THRESH_LT", intsCon(left_range[0],top_range[0]));
+                        Log.e("RANGE_THRESH_RB", intsCon(right_range[1],bottom_range[1]));
 //                        Log.e("RANGE_IN_L", Boolean.toString((bound.left >= left_range[0]) && (bound.left <= left_range[1])));
 //                        Log.e("RANGE_IN_T", Boolean.toString((bound.top >= top_range[0]) && (bound.top <= top_range[1])));
 //                        Log.e("RANGE_IN_R", Boolean.toString((bound.right >= right_range[0]) && (bound.right <= right_range[1])));
