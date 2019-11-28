@@ -6,9 +6,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -111,7 +108,6 @@ public class HomeFragment extends Fragment {
                             .setRequestedPreviewSize(viewWidth,viewHeight)
                             .setAutoFocusEnabled(true)
                             .build();
-
                     cameraSource.start(holder);
                     int camHeight = cameraSource.getPreviewSize().getHeight();
                     int camWidth = cameraSource.getPreviewSize().getWidth();
