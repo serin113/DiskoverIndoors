@@ -95,13 +95,33 @@ public class DBHelper extends SQLiteOpenHelper {
         }
         return coords;
     }
-//    private class IndoorLocation {
-//        String building;
-//        int level;
-//        String title;
-//        float x_coord;
-//        float y_coord;
-//    }
+
+    public BuildingData getBuildingfromName(String buildingName) {
+        final String table = "Building";
+        final String[] columns = {"alias", "name", "floors", "hasLGF", "delta", "xscale", "yscale", "compassOffset"};
+        final String select = "alias=?";
+        String[] selectArgs = {buildingName};
+        String limit = "1";
+        Cursor cursor = db.query(table, columns, select, selectArgs, null, null, null, limit);
+
+        BuildingData result = null;
+        if (cursor.getCount() > 0){
+            cursor.moveToFirst();
+            String alias = cursor.getString(cursor.getColumnIndex("alias"));
+            String name = cursor.getString(cursor.getColumnIndex("name"));
+            int totalFloors = cursor.getInt(cursor.getColumnIndex("floors"));
+            boolean hasLGF = cursor.getInt(cursor.getColumnIndex("hasLGF")) > 0;
+            float delta = cursor.getFloat(cursor.getColumnIndex("delta"));
+            float xscale = cursor.getFloat(cursor.getColumnIndex("xscale"));
+            float yscale = cursor.getFloat(cursor.getColumnIndex("yscale"));
+            float compassDegreeOffset = cursor.getFloat(cursor.getColumnIndex("compassOffset"));
+
+            result = new BuildingData(alias, name, totalFloors, hasLGF, delta, xscale, yscale, compassDegreeOffset);
+        }
+        return result;
+    }
+
+    // returns list of IndoorLocation classes
     public List<IndoorLocation> getRoomList(String qrCode) {
         final String table = "IndoorLocation";
         final String[] columns = {"bldg", "level", "title", "subtitle", "xcoord", "ycoord"};
