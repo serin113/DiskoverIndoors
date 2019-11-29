@@ -14,6 +14,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -37,8 +38,6 @@ import com.google.android.gms.vision.barcode.BarcodeDetector;
 import java.io.IOException;
 
 public class HomeFragment extends Fragment {
-
-    final private boolean restrictSquare = false;
 
     private TextView textView;
     private Toast toast = null;
@@ -72,7 +71,6 @@ public class HomeFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_home, container, false);
         surfaceView = root.findViewById(R.id.camerapreview);
         textView = root.findViewById(R.id.text_home);
-
         navigationButton = getActivity().findViewById(R.id.navigation_navigation);
         locationButton = getActivity().findViewById(R.id.navigation_locations);
         notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
@@ -84,11 +82,9 @@ public class HomeFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         // initialize barcode reader and camera
-        barcodeDetector = new BarcodeDetector.Builder(getActivity())
-                .setBarcodeFormats(Barcode.QR_CODE).build();
+        barcodeDetector = new BarcodeDetector.Builder(getActivity()).setBarcodeFormats(Barcode.QR_CODE).build();
 
-        // initialize surface view for the camera
-        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+        final SurfaceHolder.Callback initCameraPreviewCallback = new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
                 if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -161,14 +157,17 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
             }
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
                 cameraSource.stop();
             }
-        });
+        };
+
+        // initialize surface view for the camera
+        surfaceView.getHolder().addCallback(initCameraPreviewCallback);
+
         // handle processing of detected QR codes
         barcodeDetector.setProcessor(new Detector.Processor<Barcode>() {
             @Override
@@ -362,6 +361,23 @@ public class HomeFragment extends Fragment {
         AlertDialog navigateDialog = builder1.create();
         navigateDialog.show();
     }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        cameraSource.stop();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        try {
+            cameraSource.start(surfaceView.getHolder());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void onStop() {
         super.onStop();
