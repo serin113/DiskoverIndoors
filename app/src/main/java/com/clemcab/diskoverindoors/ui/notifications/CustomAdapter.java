@@ -85,12 +85,19 @@ public class CustomAdapter extends BaseAdapter {
         String room = navigationData.dest_room.toLowerCase().replaceAll("\\s+","_");
         String destinationImageName = building + "_" + level + "_" + room;
 
-        builder.setMessage("Tandaan mo dito ka pupunta boi");
+        builder.setMessage("This is your destination.");
         builder.setPositiveButton(
                 "Continue",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         Navigation.findNavController(fragment.getView()).navigate(R.id.action_list_select);
+                    }
+                });
+        builder.setNegativeButton(
+                "Cancel",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.dismiss();
                     }
                 });
 
