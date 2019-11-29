@@ -1,11 +1,10 @@
 package com.clemcab.diskoverindoors.ui.home;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.util.Log;
@@ -15,6 +14,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,28 +22,23 @@ import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
-import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.Navigation;
 
 import com.clemcab.diskoverindoors.DBHelper;
 import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
-import com.clemcab.diskoverindoors.ui.notifications.NotificationsFragment;
 import com.clemcab.diskoverindoors.ui.notifications.NotificationsViewModel;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
-import com.google.android.material.bottomnavigation.BottomNavigationItemView;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.io.IOException;
 
 public class HomeFragment extends Fragment {
+
+    final private boolean restrictSquare = false;
 
     private TextView textView;
     private Toast toast = null;
@@ -52,10 +47,26 @@ public class HomeFragment extends Fragment {
     private HomeViewModel homeViewModel;
     private NotificationsViewModel notificationsViewModel;
     private BarcodeDetector barcodeDetector;
+    private FrameLayout cameraFrame;
     private boolean isAlertActive = false;
     private DBHelper db;
     private View navigationButton;
     private View locationButton;
+    private int surfaceViewWidth;
+    private int surfaceViewHeight;
+
+    String intsCon(int a, int b) {
+        return Integer.toString(a) + " " + Integer.toString(b);
+    }
+    String intsCon(double a, double b) {
+        return Double.toString(a) + " " + Double.toString(b);
+    }
+
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        db = ((MainActivity) this.getActivity()).DBHelper;
+    }
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_home, container, false);
@@ -87,16 +98,62 @@ public class HomeFragment extends Fragment {
                 }
                 textView.setText("Scan QR code to start navigating.");
                 try {
-                    android.view.ViewGroup.LayoutParams lp = surfaceView.getLayoutParams();
-                    Log.e("CAMERA", Integer.toString(surfaceView.getHeight()) + " " + Integer.toString(surfaceView.getWidth()));
-                    cameraSource = new CameraSource.Builder(getActivity(),barcodeDetector)
-//                          .setRequestedPreviewSize(640,480)
-                            .setRequestedPreviewSize(surfaceView.getWidth(),surfaceView.getHeight())
-                            .setAutoFocusEnabled(true)
-                            .build();
+                    cameraFrame = getActivity().findViewById(R.id.previewframe);
+                    holder.setKeepScreenOn(true);
+                    int viewHeight = cameraFrame.getMeasuredHeight();
+                    int viewWidth = cameraFrame.getMeasuredWidth();
+
+                    CameraSource.Builder cameraSourceBuilder = new CameraSource.Builder(getActivity(),barcodeDetector)
+                            .setFacing(CameraSource.CAMERA_FACING_BACK)
+                            .setAutoFocusEnabled(true);
+
+                    if ((double)viewHeight/(double)viewWidth >= 1) {
+                        cameraSourceBuilder = cameraSourceBuilder.setRequestedPreviewSize(720,1000);
+                    } else {
+                        cameraSourceBuilder = cameraSourceBuilder.setRequestedPreviewSize(1000,720);
+                    }
+
+                    cameraSource = cameraSourceBuilder.build();
                     cameraSource.start(holder);
-                    holder.setFixedSize(surfaceView.getWidth(),surfaceView.getHeight());
-                    Log.e("CAMERA", Integer.toString(cameraSource.getPreviewSize().getHeight()) + " " + Integer.toString(cameraSource.getPreviewSize().getWidth()));
+                    int camHeight = cameraSource.getPreviewSize().getHeight();
+                    int camWidth = cameraSource.getPreviewSize().getWidth();
+
+                    double viewRatio = (double)viewHeight/(double)viewWidth;
+                    double camRatio = (double)camHeight/(double)camWidth;
+                    double scale = 1d;
+                    if (viewRatio < camRatio)
+                        scale = (double) viewWidth / (double) camWidth;
+                    else
+                        scale = (double) viewHeight / (double) camHeight;
+                    int newHeight = (int)Math.floor((double)camHeight * scale);
+                    int newWidth = (int)Math.floor((double)camWidth * scale);
+                    surfaceViewHeight = newHeight;
+                    surfaceViewWidth = newWidth;
+//                    Log.e("DIM_FRAME", intsCon(viewWidth,viewHeight));
+//                    Log.e("DIM_SUGG", intsCon(camWidth,camHeight));
+//                    Log.e("DIM_RATIO_FS", intsCon(viewRatio, camRatio));
+//                    Log.e("DIM_SCALE", Double.toString(scale));
+//                    Log.e("DIM_SURFACE", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
+//                    Log.e("DIM_NEW", intsCon(newWidth,newHeight));
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+//                            Log.e("NOPE_SURFACE_OLD", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
+//                            Log.e("NOPE_FRAME_OLD", intsCon(cameraFrame.getMeasuredWidth(),cameraFrame.getMeasuredHeight()));
+                            surfaceView.getHolder().setFixedSize(surfaceViewWidth,surfaceViewHeight);
+//                            cameraFrame.getLayoutParams().width = surfaceViewWidth;
+//                            cameraFrame.getLayoutParams().height = surfaceViewHeight;
+//                            cameraFrame.invalidate();
+//                            cameraFrame.requestLayout();
+                            surfaceView.getLayoutParams().width = surfaceViewWidth;
+                            surfaceView.getLayoutParams().height = surfaceViewHeight;
+                            surfaceView.invalidate();
+                            surfaceView.requestLayout();
+//                            Log.e("NOPE_SURFACE_NEW", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
+//                            Log.e("NOPE_FRAME_NEW", intsCon(cameraFrame.getMeasuredWidth(),cameraFrame.getMeasuredHeight()));
+                        }
+                    });
+//                    Log.e("DIM_SURFACE_F", intsCon(surfaceView.getMeasuredWidth(),surfaceView.getMeasuredHeight()));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -121,31 +178,123 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void receiveDetections(Detector.Detections<Barcode> detections) {
-                final SparseArray<Barcode> qrCodes = detections.getDetectedItems();
-
+                SparseArray<Barcode> qrCodes = detections.getDetectedItems();
+                if (surfaceView == null)
+                    return;
                 if (qrCodes.size()!=0) {
-                    final String scannedQRCode = qrCodes.valueAt(0).displayValue;
+                    Barcode centerQR = null;
 
-                    db = ((MainActivity)getActivity()).DBHelper;
+                    final int buffer_div = 7;
 
-                    getActivity().runOnUiThread(new Runnable(){
-                        @Override
-                        public void run() {
-                            if (db.codeExists(scannedQRCode)) {
-                                if (!isAlertActive) {
-                                    displayAlert(scannedQRCode);
-                                    isAlertActive = true;
-                                    cameraSource.stop();
-                                }
-                            } else {
-                                if (toast != null){
-                                    toast.cancel();
-                                }
-                                toast = Toast.makeText(getActivity(), "Invalid QR Code: " + scannedQRCode, Toast.LENGTH_SHORT);
-                                toast.show();
-                            }
+                    int camHeight = cameraSource.getPreviewSize().getHeight();
+                    int camWidth = cameraSource.getPreviewSize().getWidth();
+                    int viewHeight = surfaceView.getMeasuredHeight();
+                    int viewWidth = surfaceView.getMeasuredWidth();
+                    int visibleHeight = cameraFrame.getMeasuredHeight();
+                    int visibleWidth = cameraFrame.getMeasuredWidth();
+
+                    double camRatio = (double)camHeight/(double)camWidth;
+                    double viewRatio = (double)viewHeight/(double)viewWidth;
+                    double scale = 1d;
+                    int visibleHeight_scaled = 0;
+                    int visibleWidth_scaled = 0;
+                    if (viewRatio < camRatio) {
+                        scale = (double) camWidth / (double) visibleWidth;
+                        visibleWidth_scaled = camWidth;
+                        visibleHeight_scaled = (int)Math.floor((double)visibleHeight * scale);
+                    } else {
+                        scale = (double) camHeight / (double) visibleHeight;
+                        visibleWidth_scaled = (int)Math.floor((double)visibleWidth * scale);
+                        visibleHeight_scaled = camHeight;
+                    }
+
+
+//                    Log.e("RANGE_","============================");
+//                    Log.e("RANGE_SURFACE", intsCon(surfaceView.getMeasuredWidth(), surfaceView.getMeasuredHeight()));
+//                    Log.e("RANGE_CAMERASOURCE", intsCon(cameraSource.getPreviewSize().getWidth(), cameraSource.getPreviewSize().getHeight()));
+//                    Log.e("RANGE_VISIBLEFRAME", intsCon(visibleWidth, visibleHeight));
+//                    Log.e("RANGE_VR_CR", intsCon(viewRatio,camRatio));
+//                    Log.e("RANGE_VR<CR", Boolean.toString(viewRatio < camRatio));
+//                    Log.e("RANGE_SCALE", Double.toString(scale));
+
+                    int thresh_buffer, left_thresh, right_thresh, top_thresh, bottom_thresh;
+                    int[] left_range = new int[2];
+                    int[] right_range = new int[2];
+                    int[] top_range = new int[2];
+                    int[] bottom_range = new int[2];
+
+                    if (viewRatio < camRatio) {
+                        int t = Math.floorDiv((camHeight - visibleHeight_scaled), 2);
+                        int b = camHeight - t;
+                        int third = Math.floorDiv(b - t, 3);
+                        top_thresh = t + third;
+                        bottom_thresh = b - third;
+                        left_thresh = Math.floorDiv(camWidth, 2) - Math.floorDiv(third, 2);
+                        right_thresh = left_thresh + third;
+                        thresh_buffer = Math.floorDiv(third, buffer_div);
+                    } else {
+                        int l = Math.floorDiv((camWidth - visibleWidth_scaled), 2);
+                        int r = camWidth - l;
+                        int third = Math.floorDiv(r - l,3);
+                        left_thresh = l + third;
+                        right_thresh = r - third;
+                        top_thresh = Math.floorDiv(camHeight, 2) - Math.floorDiv(third, 2);
+                        bottom_thresh = top_thresh + third;
+                        thresh_buffer = Math.floorDiv(third, buffer_div);
+                    }
+
+                    left_range[0] = left_thresh;
+                    left_range[1] = left_thresh + thresh_buffer;
+                    right_range[0] = right_thresh - thresh_buffer;
+                    right_range[1] = right_thresh;
+                    top_range[0] = top_thresh;
+                    top_range[1] = top_thresh + thresh_buffer;
+                    bottom_range[0] = bottom_thresh - thresh_buffer;
+                    bottom_range[1] = bottom_thresh;
+
+                    for (int i=0; i<qrCodes.size(); i++) {
+                        Rect bound = qrCodes.valueAt(i).getBoundingBox();
+                        boolean inRange = (bound.left >= left_range[0]) && (bound.left <= left_range[1]);
+                        inRange = inRange && (bound.top >= top_range[0]) && (bound.top <= top_range[1]);
+                        inRange = inRange && (bound.right >= right_range[0]) && (bound.right <= right_range[1]);
+                        inRange = inRange && (bound.bottom >= bottom_range[0]) && (bound.bottom <= bottom_range[1]);
+//                        Log.e("RANGE_LT", intsCon(bound.left, bound.top));
+//                        Log.e("RANGE_RB", intsCon(bound.right, bound.bottom));
+//                        Log.e("RANGE_THRESH_BUF", Integer.toString(thresh_buffer));
+//                        Log.e("RANGE_THRESH_LT", intsCon(left_range[0],top_range[0]));
+//                        Log.e("RANGE_THRESH_RB", intsCon(right_range[1],bottom_range[1]));
+//                        Log.e("RANGE_IN_L", Boolean.toString((bound.left >= left_range[0]) && (bound.left <= left_range[1])));
+//                        Log.e("RANGE_IN_T", Boolean.toString((bound.top >= top_range[0]) && (bound.top <= top_range[1])));
+//                        Log.e("RANGE_IN_R", Boolean.toString((bound.right >= right_range[0]) && (bound.right <= right_range[1])));
+//                        Log.e("RANGE_IN_B", Boolean.toString((bound.bottom >= bottom_range[0]) && (bound.bottom <= bottom_range[1])));
+
+                        if (inRange) {
+                            centerQR = qrCodes.valueAt(i);
+                            break;
                         }
-                    });
+                    }
+                    if (centerQR != null) {
+                        final String scannedQRCode = centerQR.displayValue;
+
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (db.codeExists(scannedQRCode)) {
+                                    if (!isAlertActive) {
+                                        displayAlert(scannedQRCode);
+                                        isAlertActive = true;
+                                        cameraSource.stop();
+                                    }
+                                } else {
+                                    if (toast != null) {
+                                        toast.cancel();
+                                    }
+                                    toast = Toast.makeText(getActivity(), "Invalid QR code: " + scannedQRCode, Toast.LENGTH_SHORT);
+                                    toast.show();
+                                }
+                            }
+                        });
+                    }
                 }
             }
         });
