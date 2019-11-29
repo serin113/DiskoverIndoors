@@ -359,23 +359,25 @@ public class Accelerometer {
                                 (z_vel_t >= velThreshMin ? z_vel : 0d) :
                                 (x_vel >= 0d ? velThreshMax : -velThreshMax);
 
-                        double velMag = Math.sqrt(x_vel*x_vel + y_vel*y_vel);
-                        if (abaqConst && velMag>0d) {
-                            x_vel_t = 0d;
-                            y_vel_t = -1d * velMag;
-                            z_vel_t = 0d;
-                            x_vel = x_vel_t * (double)rot[0] + y_vel_t * (double)rot[1] + z_vel_t * (double)rot[2];
-                            y_vel = x_vel_t * (double)rot[3] + y_vel_t * (double)rot[4] + z_vel_t * (double)rot[5];
-                            z_vel = x_vel_t * (double)rot[6] + y_vel_t * (double)rot[7] + z_vel_t * (double)rot[8];
-                            x_vel = (Math.abs(x_vel) <= abaqConstVel) ?
-                                    x_vel :
-                                    (x_vel >= 0d ? abaqConstVel : -abaqConstVel);
-                            y_vel = (Math.abs(y_vel) <= abaqConstVel) ?
-                                    y_vel :
-                                    (y_vel >= 0d ? abaqConstVel : -abaqConstVel);
-                            z_vel = (Math.abs(z_vel) <= abaqConstVel) ?
-                                    z_vel :
-                                    (z_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                        if (abaqConst) {
+                            double velMag = Math.sqrt(x_vel*x_vel + y_vel*y_vel + z_vel*z_vel);
+                            if (velMag>0d) {
+                                x_vel_t = 0d;
+                                y_vel_t = -1d * velMag;
+                                z_vel_t = 0d;
+                                x_vel = x_vel_t * (double) rot[0] + y_vel_t * (double) rot[1] + z_vel_t * (double) rot[2];
+                                y_vel = x_vel_t * (double) rot[3] + y_vel_t * (double) rot[4] + z_vel_t * (double) rot[5];
+                                z_vel = x_vel_t * (double) rot[6] + y_vel_t * (double) rot[7] + z_vel_t * (double) rot[8];
+                                x_vel = (Math.abs(x_vel) <= abaqConstVel) ?
+                                        x_vel :
+                                        (x_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                                y_vel = (Math.abs(y_vel) <= abaqConstVel) ?
+                                        y_vel :
+                                        (y_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                                z_vel = (Math.abs(z_vel) <= abaqConstVel) ?
+                                        z_vel :
+                                        (z_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                            }
                         }
 
 //                        float[] orientationVals = new float[3];
