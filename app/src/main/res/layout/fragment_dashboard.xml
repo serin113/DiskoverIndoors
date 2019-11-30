@@ -86,10 +86,13 @@
         app:layout_constraintLeft_toLeftOf="parent">
 
         <ImageView
-            android:id="@+id/imageView"
+            android:id="@+id/imageViewMain"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="#777777"/>
+            android:layout_height="match_parent"/>
+        <ImageView
+            android:id="@+id/imageViewUserMarker"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
 <!--        insert marker imageview here-->
 

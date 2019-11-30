@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.Matrix;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
@@ -51,13 +52,19 @@ import java.lang.reflect.Field;
 public class DashboardFragment extends Fragment {
 
     private Accelerometer accelerometer;
-    private NotificationsViewModel notificationsViewModel;
     private DBHelper db;
-    private ImageView imageView;
+    private ImageView mainImageView;
+    private ImageView userMarkerImageView;
+    private Bitmap layout;
+    private Bitmap mutableMap;;
     private Bitmap mutableUserMarker;
     private Canvas mapCanvas;
+    private Canvas layoutCanvas;
+    private Canvas userMarkerCanvas;
     private NavigationData navigationData = null;
     private BuildingData buildingData;
+    double currentX;
+    double currentY;
 
     // settings for resizing image to bitmaps
     private final int MAP_REQ_WIDTH = 500;
@@ -92,7 +99,8 @@ public class DashboardFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
-        imageView = root.findViewById(R.id.imageView);
+        mainImageView = root.findViewById(R.id.imageViewMain);
+        userMarkerImageView = root.findViewById(R.id.imageViewUserMarker);
 
         db = ((MainActivity)getActivity()).DBHelper;
         navigationData = ( (MainActivity) (getActivity()) ).navData;
@@ -109,34 +117,29 @@ public class DashboardFragment extends Fragment {
             buildingData = db.getBuildingfromName(navigationData.building);
             int drawableId = getDrawableId(navigationData.building, navigationData.start_floor);
             if (drawableId > 0) {
-                // draw the map canvas
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inJustDecodeBounds = true;
-                BitmapFactory.decodeResource(getActivity().getResources(), drawableId, options);
                 Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
-                Bitmap mutableMap = map.copy(Bitmap.Config.ARGB_8888, true);
-                mapCanvas = new Canvas(mutableMap);
-
-
-                // draw user marker on canvas
                 Bitmap userMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, USER_MARKER_REQ_WIDTH, USER_MARKER_REQ_HEIGHT);
-                mutableUserMarker = userMarker.copy(Bitmap.Config.ARGB_8888, true);
 
+                mutableMap = map.copy(Bitmap.Config.ARGB_8888, true);
                 int mapWidth = mutableMap.getWidth();
                 int mapHeight = mutableMap.getHeight();
+
+                mutableUserMarker = userMarker.copy(Bitmap.Config.ARGB_8888, true);
                 int userMarkerWidth = mutableUserMarker.getWidth();
                 int userMarkerHeight = mutableUserMarker.getHeight();
+
+                mapCanvas = new Canvas(mutableMap);
+
                 double x_coord = getRelativeCoords((double) navigationData.start_x, (double) buildingData.xscale, mapWidth);
                 double y_coord = getRelativeCoords((double) navigationData.start_y * -1, (double) buildingData.yscale, mapHeight);
 
-                mapCanvas.drawBitmap(mutableUserMarker, (float) x_coord - (userMarkerWidth / 2), (float) y_coord - (userMarkerHeight / 2), null);
+                currentX = x_coord - (userMarkerWidth / 2f); // adjusts to the center of the image
+                currentY = y_coord - (userMarkerHeight / 2f);
+                mapCanvas.drawBitmap(mutableUserMarker, (float) currentX, (float) currentY, null);
 
-                imageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
-
+                mainImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
             }
         }
-
-        imageView = root.findViewById(R.id.imageView);
 
         // accelerometer handles all sensor computations and management
         accelerometer = new Accelerometer(getActivity());
@@ -151,11 +154,18 @@ public class DashboardFragment extends Fragment {
                 double deltaX = (x_vel*multiplier)/timeDiff;
                 double deltaY = (y_vel*multiplier)/timeDiff;
 
-                Matrix matrix = new Matrix();
-                matrix.setTranslate((float)deltaX, (float)deltaY);
+                double newX = currentX + deltaX;
+                double newY = currentY + deltaY;
 
-//                map_pointer.setX(x_coord - (float)deltaX);
-//                map_pointer.setY(y_coord + (float)deltaY);
+                Matrix matrix = new Matrix();
+                matrix.setRotate(azimuth);
+                matrix.setTranslate((float) newX, (float) newY);
+
+                currentX = newX;
+                currentY = newY;
+
+                mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
+                mainImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
             }
             @Override
             public void onRotation(float azimuth) {
@@ -507,7 +517,8 @@ public class DashboardFragment extends Fragment {
         super.onDestroy();
         cameraSource.stop();
         accelerometer.unregister();
-        imageView.setImageDrawable(null);
+        mainImageView.setImageDrawable(null);
+        userMarkerImageView.setImageDrawable(null);
     }
 
 }
