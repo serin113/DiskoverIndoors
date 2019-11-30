@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.Navigation;
 
 import com.clemcab.diskoverindoors.IndoorLocation;
+import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
@@ -32,6 +33,7 @@ public class CustomAdapter extends BaseAdapter {
     NotificationsViewModel viewModel;
     Fragment fragment;
     BottomNavigationView bottomNavigationView;
+    NavigationData navdata;
 
     public CustomAdapter(Fragment fragment, Context applicationContext, List<IndoorLocation> indoorLocationList, int startingLevel, Float[] startingCoords) {
         this.context = applicationContext;
@@ -68,7 +70,8 @@ public class CustomAdapter extends BaseAdapter {
 //            String data = room.getText().toString();
             NavigationData navData = (NavigationData) v.getTag();
             if (navData != null) {
-                viewModel.setNavData(navData);
+//                viewModel.setNavData(navData);
+                ( (MainActivity)(fragment.getActivity()) ).navData = navData;
                 displayAlert(navData);
             }
         }

@@ -4,6 +4,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +17,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -34,7 +37,11 @@ public class DashboardFragment extends Fragment {
     private Accelerometer accelerometer;
     private NotificationsViewModel notificationsViewModel;
     private DBHelper db;
-    private ImageView imageView = null;
+    private ImageView imageView;
+    private Bitmap mutableUserMarker;
+    private Canvas mapCanvas;
+    private NavigationData navigationData = null;
+    private BuildingData buildingData;
 
     // settings for resizing image to bitmaps
     private final int MAP_REQ_WIDTH = 500;
@@ -42,52 +49,44 @@ public class DashboardFragment extends Fragment {
     private final int USER_MARKER_REQ_WIDTH = 30;
     private final int USER_MARKER_REQ_HEIGHT = 30;
 
-    @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        db = ((MainActivity) this.getActivity()).DBHelper;
-    }
-
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
+        imageView = root.findViewById(R.id.imageView);
+
+        db = ((MainActivity)getActivity()).DBHelper;
+        navigationData = ( (MainActivity) (getActivity()) ).navData;
 
         // initiate the 2D scene
-        notificationsViewModel = ViewModelProviders.of(this.getActivity()).get(NotificationsViewModel.class);
-        if (notificationsViewModel.navData != null) {
-            notificationsViewModel.navData.observe(getViewLifecycleOwner(), new Observer<NavigationData>() {
-                @Override
-                public void onChanged(NavigationData navData) {
-                    BuildingData buildingData = db.getBuildingfromName(navData.building);
+        if (navigationData != null && db != null) {
+            buildingData = db.getBuildingfromName(navigationData.building);
+            int drawableId = getDrawableId(navigationData.building, navigationData.start_floor);
+            if (drawableId > 0) {
+                // draw the map canvas
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = true;
+                BitmapFactory.decodeResource(getActivity().getResources(), drawableId, options);
+                Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
+                Bitmap mutableMap = map.copy(Bitmap.Config.ARGB_8888, true);
+                mapCanvas = new Canvas(mutableMap);
 
-                    int drawableId = getDrawableId(navData.building,navData.start_floor);
-                    if (drawableId > 0) {
-                        // draw the map canvas
-                        BitmapFactory.Options options = new BitmapFactory.Options();
-                        options.inJustDecodeBounds = true;
-                        BitmapFactory.decodeResource(getActivity().getResources(), drawableId, options);
-                        Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
-                        Bitmap mutableMap =  map.copy(Bitmap.Config.ARGB_8888, true);
-                        Canvas mapCanvas = new Canvas(mutableMap);
+                // draw user marker on canvas
+                Bitmap userMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, USER_MARKER_REQ_WIDTH, USER_MARKER_REQ_HEIGHT);
+                mutableUserMarker = userMarker.copy(Bitmap.Config.ARGB_8888, true);
 
-                        // draw user marker on canvas
-                        Bitmap userMarker =  decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, USER_MARKER_REQ_WIDTH, USER_MARKER_REQ_HEIGHT);
-                        Bitmap mutableUserMarker = userMarker.copy(Bitmap.Config.ARGB_8888, true);
-                        int mapWidth =  mutableMap.getWidth();
-                        int mapHeight = mutableMap.getHeight();
-                        int userMarkerWidth =  mutableUserMarker.getWidth();
-                        int userMarkerHeight = mutableUserMarker.getHeight();
-                        double x_coord = getRelativeCoords((double) navData.start_x,(double) buildingData.xscale,mapWidth);
-                        double y_coord = getRelativeCoords((double) navData.start_y*-1,(double) buildingData.yscale,mapHeight);
+                int mapWidth = mutableMap.getWidth();
+                int mapHeight = mutableMap.getHeight();
+                int userMarkerWidth = mutableUserMarker.getWidth();
+                int userMarkerHeight = mutableUserMarker.getHeight();
+                double x_coord = getRelativeCoords((double) navigationData.start_x, (double) buildingData.xscale, mapWidth);
+                double y_coord = getRelativeCoords((double) navigationData.start_y * -1, (double) buildingData.yscale, mapHeight);
 
-                        mapCanvas.drawBitmap(mutableUserMarker, (float) x_coord - (userMarkerWidth/2),(float) y_coord - (userMarkerHeight/2), null);
+                mapCanvas.drawBitmap(mutableUserMarker, (float) x_coord - (userMarkerWidth / 2), (float) y_coord - (userMarkerHeight / 2), null);
 
-                        imageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
-                    }
-                }
-            });
+                imageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
+
+            }
         }
 
-        // initialize map canvas
         imageView = root.findViewById(R.id.imageView);
 
         // accelerometer handles all sensor computations and management
@@ -101,17 +100,11 @@ public class DashboardFragment extends Fragment {
                 double deltaX = (x_vel*multiplier)/timeDiff;
                 double deltaY = (y_vel*multiplier)/timeDiff;
 
+                Matrix matrix = new Matrix();
+                matrix.setTranslate((float)deltaX, (float)deltaY);
+
 //                map_pointer.setX(x_coord - (float)deltaX);
 //                map_pointer.setY(y_coord + (float)deltaY);
-//                String text = "Accelerometer Readings:\n" +
-//                              "x_vel = " + x_vel + " m/s\n " +
-//                              "y_vel = " + y_vel + " m/s\n " +
-//                              "z_vel = " + z_vel + " m/s\n " +
-//                              "timeDiff = " + timeDiff + " Hz\n " +
-//                              "x - " + x_coord + "\n" +
-//                              "y - " + y_coord + "\n" +
-//                              "azimuth = " + azimuth;
-//                textViewAccel.setText(text);
             }
             @Override
             public void onRotation(float azimuth) {
@@ -209,4 +202,37 @@ public class DashboardFragment extends Fragment {
         imageView.setImageDrawable(null);
     }
 
+}
+
+// generic class and interface to handle callback
+ class NavigationDataObserver {
+//    public OnCustomEventListener mListener; //listener field
+//    public interface OnCustomEventListener{
+//       void onEvent(NavigationData navData);
+//    }
+//    public void setCustomEventListener(OnCustomEventListener eventListener) {
+//        this.mListener = eventListener;
+//    }
+    private Listener listener;
+    public void setListener(Listener l) {
+        listener = l;
+    }
+    public interface Listener {
+        void onDataReceived(NavigationData navdata);
+    }
+
+    NavigationDataObserver (FragmentActivity activity, LifecycleOwner owner) {
+        NotificationsViewModel notificationsViewModel = ViewModelProviders.of(activity).get(NotificationsViewModel.class);
+        if (notificationsViewModel.navData != null) {
+            notificationsViewModel.navData.observe(owner, new Observer<NavigationData>() {
+                @Override
+                public void onChanged(NavigationData navData) {
+                    if (listener !=null) {
+                        listener.onDataReceived(navData);
+                        Log.e("DebugTag", "ObserverClass onChanged: " + navData.building);
+                    }
+                }
+            });
+        }
+    }
 }
