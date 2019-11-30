@@ -1,5 +1,7 @@
 package com.clemcab.diskoverindoors.ui.dashboard;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -9,7 +11,10 @@ import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -19,6 +24,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.LifecycleOwner;
@@ -32,6 +38,13 @@ import com.clemcab.diskoverindoors.R;
 import com.clemcab.diskoverindoors.ui.home.HomeViewModel;
 import com.clemcab.diskoverindoors.ui.notifications.NavigationData;
 import com.clemcab.diskoverindoors.ui.notifications.NotificationsViewModel;
+import com.google.android.gms.vision.CameraSource;
+import com.google.android.gms.vision.Detector;
+import com.google.android.gms.vision.barcode.Barcode;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import java.io.IOException;
 
 import java.lang.reflect.Field;
 
@@ -51,6 +64,31 @@ public class DashboardFragment extends Fragment {
     private final int MAP_REQ_HEIGHT = 500;
     private final int USER_MARKER_REQ_WIDTH = 30;
     private final int USER_MARKER_REQ_HEIGHT = 30;
+
+    private BarcodeDetector barcodeDetector;
+    private SurfaceView surfaceView;
+    private FrameLayout dashboardFrame;
+    private CameraSource cameraSource;
+    private int surfaceViewHeight;
+    private int surfaceViewWidth;
+    private boolean cameraVisible;
+    private FloatingActionButton qrfab;
+    private SurfaceHolder surfaceHolder;
+    private DashboardViewModel dashboardViewModel;
+
+    String intsCon(int a, int b) {
+        return Integer.toString(a) + " " + Integer.toString(b);
+    }
+    String intsCon(double a, double b) {
+        return Double.toString(a) + " " + Double.toString(b);
+    }
+
+
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        db = ((MainActivity) this.getActivity()).DBHelper;
+    }
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
@@ -105,8 +143,10 @@ public class DashboardFragment extends Fragment {
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
             public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, float azimuth) {
-                double multiplier = 500d;
-
+                // relative velocity m/s -> canvasUnits/s
+                final double multiplier = 500d;
+//                float x_coord = map_pointer.getX();
+//                float y_coord = map_pointer.getY();
                 double deltaX = (x_vel*multiplier)/timeDiff;
                 double deltaY = (y_vel*multiplier)/timeDiff;
 
