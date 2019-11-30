@@ -96,6 +96,33 @@ public class DBHelper extends SQLiteOpenHelper {
         return coords;
     }
 
+    public List<float[]> getStaircaseCoordsFromBuildingAndLevel (String building, String level) {
+        final String table = "QRTag";
+        final String[] columns = {"url", "xcoord", "ycoord"};
+        final String select = "(url LIKE ? AND url LIKE ?) AND (url LIKE ? OR url LIKE ?)";
+        String[] selectArgs = {building + "%", "%" + level + "%", "%Stair%", "%Column%"};
+
+        Cursor cursor = db.query(table, columns, select, selectArgs, null, null, null, null);
+        Log.e("StairMarkerDebug", "getStaircaseCoordsFromBuildingAndLevel: RESULT = " + cursor);
+
+        List<float[]> list = new ArrayList<>();
+        int row_count = cursor.getCount();
+
+        cursor.moveToFirst();
+        for (int i = 0; i < row_count; i++) {
+            float x_coord = cursor.getFloat(cursor.getColumnIndex("xcoord"));
+            float y_coord = cursor.getFloat(cursor.getColumnIndex("ycoord"));
+            float coords[] = {x_coord,y_coord};
+
+            list.add(coords);
+            cursor.moveToNext();
+        }
+
+        cursor.close();
+
+        return list;
+    }
+
     public BuildingData getBuildingfromName(String buildingName) {
         final String table = "Building";
         final String[] columns = {"alias", "name", "floors", "hasLGF", "delta", "xscale", "yscale", "compassOffset"};

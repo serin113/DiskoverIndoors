@@ -50,6 +50,7 @@ import com.google.android.material.floatingactionbutton.ExtendedFloatingActionBu
 import java.io.IOException;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 public class DashboardFragment extends Fragment {
 
@@ -58,12 +59,15 @@ public class DashboardFragment extends Fragment {
 
     private ImageView mainImageView;
     private ImageView userMarkerImageView;
-    private Bitmap layout;
+    private int mapWidth;
+    private int mapHeight;
     private Bitmap mutableMap;;
     private Bitmap mutableUserMarker;
+    private Bitmap mutableUpstairsMarker;
+    private Bitmap mutableDownstairsMarker;
+    private Bitmap mutableDestinationMarker;
     private Canvas mapCanvas;
-    private Canvas layoutCanvas;
-    private Canvas userMarkerCanvas;
+    List<float[]> staircaseList;
 
     private NavigationData navigationData = null;
     private BuildingData buildingData;
@@ -78,8 +82,8 @@ public class DashboardFragment extends Fragment {
     // settings for resizing image to bitmaps
     private final int MAP_REQ_WIDTH = 500;
     private final int MAP_REQ_HEIGHT = 500;
-    private final int USER_MARKER_REQ_WIDTH = 30;
-    private final int USER_MARKER_REQ_HEIGHT = 30;
+    private final int MARKER_REQ_WIDTH = 30;
+    private final int MARKER_REQ_HEIGHT = 30;
 
     private BarcodeDetector barcodeDetector;
     private SurfaceView surfaceView;
@@ -144,17 +148,29 @@ public class DashboardFragment extends Fragment {
             int drawableId = getDrawableId(navigationData.building, navigationData.start_floor);
             if (drawableId > 0) {
                 Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
-                Bitmap userMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, USER_MARKER_REQ_WIDTH, USER_MARKER_REQ_HEIGHT);
+                Bitmap userMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
+
+                Bitmap upstairsMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.upstairs_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
+                Bitmap downstairsMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.downstairs_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
+                Bitmap destinationMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.destination_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
 
                 mutableMap = map.copy(Bitmap.Config.ARGB_8888, true);
-                int mapWidth = mutableMap.getWidth();
-                int mapHeight = mutableMap.getHeight();
+                mapWidth = mutableMap.getWidth();
+                mapHeight = mutableMap.getHeight();
 
                 mutableUserMarker = userMarker.copy(Bitmap.Config.ARGB_8888, true);
                 int userMarkerWidth = mutableUserMarker.getWidth();
                 int userMarkerHeight = mutableUserMarker.getHeight();
 
+                mutableUpstairsMarker = upstairsMarker.copy(Bitmap.Config.ARGB_8888, true);
+                mutableDownstairsMarker = downstairsMarker.copy(Bitmap.Config.ARGB_8888, true);
+                mutableDestinationMarker = destinationMarker.copy(Bitmap.Config.ARGB_8888, true);
+
+                staircaseList = db.getStaircaseCoordsFromBuildingAndLevel(navigationData.building,Integer.toString(navigationData.start_floor));
+
                 mapCanvas = new Canvas(mutableMap);
+
+                setMarkers(navigationData.start_floor, navigationData.dest_floor);
 
                 double x_coord = getRelativeCoords((double) navigationData.start_x, (double) buildingData.xscale, mapWidth);
                 double y_coord = getRelativeCoords((double) navigationData.start_y * -1, (double) buildingData.yscale, mapHeight);
@@ -164,7 +180,6 @@ public class DashboardFragment extends Fragment {
                 mapCanvas.drawBitmap(mutableUserMarker, (float) currentX, (float) currentY, null);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
 
-//                mainImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
                 Glide.with(this)
                         .load(drawableId)
                         .into(mainImageView);
@@ -195,6 +210,7 @@ public class DashboardFragment extends Fragment {
                 currentY = newY;
                 mapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
                 mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
+                setMarkers(navigationData.start_floor, navigationData.dest_floor);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
             }
             @Override
@@ -205,6 +221,7 @@ public class DashboardFragment extends Fragment {
             @Override
             public void onPressureChange(float altitude) {
                 float threshold = 0.5f; // set for testing
+
                 if (accelerometer.hasBarometer()) {
                     if (startingAltitude == 0.0f)
                         startingAltitude = altitude;
@@ -215,25 +232,25 @@ public class DashboardFragment extends Fragment {
                          altitudeDifference = startingAltitude - currentAltitude;
 
                      if (Math.abs(altitudeDifference) >= threshold) {
-                         Log.e("SensorTest", "THRESHOLD BREACH  THRESHOLD BREACH  THRESHOLD BREACH  THRESHOLD BREACH");
+//                         Log.e("SensorTest", "THRESHOLD BREACH  THRESHOLD BREACH  THRESHOLD BREACH  THRESHOLD BREACH");
                          if (altitudeDifference > 0) {
                              // went down, check if at lowest floor
                              if (navigationData.start_floor > 1) {
                                  navigationData.start_floor -= 1;
                              }
-                             Log.e("SensorTest", "DOWN DOWN DOWN DOWN DOWN DOWN");
+//                             Log.e("SensorTest", "DOWN DOWN DOWN DOWN DOWN DOWN");
                          } else {
                              // went up, check if at highest floor
                              if (navigationData.start_floor < buildingData.totalFloors) {
                                  navigationData.start_floor += 1;
                              }
-                             Log.e("SensorTest", "UP UP UP UP UP UP UP UP");
+//                             Log.e("SensorTest", "UP UP UP UP UP UP UP UP");
                          }
                          changeLevel(navigationData.building, navigationData.start_floor);
                          startingAltitude = currentAltitude;
 //                         Log.e("SensorTest", "RESET starting altitude > " + startingAltitude);
                      }
-                    Log.e("SensorTest", "onPressureChange: start > " + startingAltitude + " current > " + currentAltitude + " difference > " + altitudeDifference);
+//                    Log.e("SensorTest", "onPressureChange: start > " + startingAltitude + " current > " + currentAltitude + " difference > " + altitudeDifference);
                 }
             }
         });
@@ -241,16 +258,80 @@ public class DashboardFragment extends Fragment {
         return root;
     }
 
-    public void changeLevel(String building, int level) {
-        // update map imageView using Glide
+    // updates map image and markers
+    public void changeLevel(String building, int newLevel) {
         Glide.with(this)
-                .load(getDrawableId(building, level))
+                .load(getDrawableId(building, newLevel))
                 .into(mainImageView);
-        dashboardStart.setText(buildingData.floorNameFromLevel(navigationData.start_floor));
+        dashboardStart.setText(buildingData.floorNameFromLevel(newLevel));
+        setMarkers(newLevel,navigationData.dest_floor);
+        userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
+        // generate list of staircases for the level
+        staircaseList = db.getStaircaseCoordsFromBuildingAndLevel(navigationData.building,Integer.toString(navigationData.start_floor));
+    }
 
-        // update destination markers
-            // if same level sa destination set markers to room x/y
-            // else set markers to nearest staircase
+    // update markers: going up/down stairs, destination marker
+    public void setMarkers(int currentLevel, int destinationLevel) {
+        Bitmap marker;
+        float marker_x;
+        float marker_y;
+
+        if (currentLevel == destinationLevel) {
+            marker = mutableDestinationMarker;
+            marker_x = navigationData.dest_x;
+            marker_y = navigationData.dest_y;
+        } else {
+            marker = ((currentLevel > destinationLevel) ? mutableDownstairsMarker : mutableUpstairsMarker);
+            float[] stairCoords = getNearestStairs();
+            marker_x = stairCoords[0];
+            marker_y = stairCoords[1];
+        }
+
+        double x_coord = getRelativeCoords((double) marker_x, (double) buildingData.xscale, mapWidth);
+        double y_coord = getRelativeCoords((double) marker_y * -1, (double) buildingData.yscale, mapHeight);
+        double adjustedX = x_coord - (marker.getWidth() / 2f); // adjusts to the center of the image
+        double adjustedY = y_coord - (marker.getHeight() / 2f);
+
+        mapCanvas.drawBitmap(marker, (float) adjustedX, (float) adjustedY, null);
+    }
+
+    public float[] getNearestStairs() {
+        float[] nearestStairsCoords = new float[2];
+        // gets list of staircase coordinates on the current floor level
+//        Log.e("StairMarkerDebug", "getNearestStairs: # of stairs = " + staircaseList.size());
+
+        if (staircaseList.size() > 1) {
+            double leastDistance = -1;
+            int nearestStairIndex = -1;
+
+            for (int i = 0; i < staircaseList.size(); i++) {
+                double stairX = staircaseList.get(i)[0];
+                double stairY = staircaseList.get(i)[1];
+
+                double relativeStairX = getRelativeCoords( stairX, (double) buildingData.xscale, mapWidth);
+                double relativeStairY = getRelativeCoords(stairY * -1, (double) buildingData.yscale, mapHeight);
+
+                double distance = euclidianDistance(relativeStairX, relativeStairY, currentX, currentY);
+
+                if (leastDistance == -1 || distance < leastDistance) {
+                    leastDistance = distance;
+                    nearestStairIndex = i;
+                }
+//                Log.e("StairMarkerDebug", "getNearestStairs: current distance = " + distance + " least distance = " + leastDistance);
+            }
+            nearestStairsCoords = staircaseList.get(nearestStairIndex);
+        } else if (staircaseList.size() == 1) {
+            // only one staircase on that level
+            nearestStairsCoords = staircaseList.get(0);
+        } else {
+            // no db result
+//            Log.e("DatabaseError", "getNearestStairs: no list fetched.");
+        }
+        return nearestStairsCoords;
+    }
+
+    public double euclidianDistance(double x1, double y1, double x2, double y2){
+        return Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
     }
 
 
