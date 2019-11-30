@@ -21,6 +21,7 @@ import androidx.navigation.ui.NavigationUI;
 public class MainActivity extends AppCompatActivity {
     public Accelerometer Accelerometer;
     public DBHelper DBHelper;
+    public NavigationData navData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,5 +45,6 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupWithNavController(navView, navController);
         Accelerometer = new Accelerometer(this);
         DBHelper = new DBHelper(this);
+        navData = null;
     }
 }
