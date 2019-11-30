@@ -6,6 +6,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Matrix;
 import android.graphics.PorterDuff;
@@ -32,6 +33,7 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
+import com.bumptech.glide.Glide;
 import com.clemcab.diskoverindoors.BuildingData;
 import com.clemcab.diskoverindoors.DBHelper;
 import com.clemcab.diskoverindoors.MainActivity;
@@ -130,7 +132,6 @@ public class DashboardFragment extends Fragment {
             int drawableId = getDrawableId(navigationData.building, navigationData.start_floor);
             if (drawableId > 0) {
                 Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
-
                 Bitmap userMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, USER_MARKER_REQ_WIDTH, USER_MARKER_REQ_HEIGHT);
 
                 mutableMap = map.copy(Bitmap.Config.ARGB_8888, true);
@@ -149,8 +150,12 @@ public class DashboardFragment extends Fragment {
                 currentX = x_coord - (userMarkerWidth / 2f); // adjusts to the center of the image
                 currentY = y_coord - (userMarkerHeight / 2f);
                 mapCanvas.drawBitmap(mutableUserMarker, (float) currentX, (float) currentY, null);
+                userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
 
-                mainImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
+//                mainImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
+                Glide.with(this)
+                        .load(drawableId)
+                        .into(mainImageView);
             }
         }
 
@@ -177,9 +182,9 @@ public class DashboardFragment extends Fragment {
 
                 currentX = newX;
                 currentY = newY;
-
+                mapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
                 mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
-                mainImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
+                userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
             }
             @Override
             public void onRotation(float azimuth) {
