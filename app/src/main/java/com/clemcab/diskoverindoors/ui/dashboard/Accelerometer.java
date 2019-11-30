@@ -30,6 +30,7 @@ public class Accelerometer {
     public interface Listener {
         void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, float azimuth);
         void onRotation(float azimuth);
+        void onPressureChange(float altitude);
     }
     private Listener listener;
     public void setListener(Listener l) {
@@ -37,6 +38,7 @@ public class Accelerometer {
     }
     private SensorManager sensorManager;
     private Sensor accelSensor;
+    private Sensor barometerSensor;
     private Sensor gravAccelSensor;
     private Sensor magSensor;
     private Sensor gyroSensor;
@@ -47,6 +49,7 @@ public class Accelerometer {
     private float[] rotationMatrix;
 
     private float azimuth;
+    private boolean hasBarometer;
     private List<Double> sensorValsX;
     private List<Double> sensorValsY;
     private List<Double> sensorValsZ;
@@ -63,6 +66,10 @@ public class Accelerometer {
 
     public void setAzimuthOffset(float offset) {
         this.azimuth_offset = offset;
+    }
+
+    public boolean hasBarometer() {
+        return this.hasBarometer;
     }
 
     /* GYRO FUSION STUFF */
@@ -265,6 +272,7 @@ public class Accelerometer {
 
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        barometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
         gravAccelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -273,131 +281,137 @@ public class Accelerometer {
             @Override
             public void onSensorChanged(SensorEvent sensorEvent) {
                 switch (sensorEvent.sensor.getType()) {
-                case Sensor.TYPE_ACCELEROMETER:
-                    if (groundLock || abaqConst) {
-                        System.arraycopy(sensorEvent.values, 0, gravAccelReading,
-                                0, gravAccelReading.length);
-                        if (groundLock && gyroFusion && !abaqConst) {
-                            if (SensorManager.getRotationMatrix(rotationMatrix, null, gravAccelReading, magReading))
-                                SensorManager.getOrientation(rotationMatrix, accMagOrientation);
-                        }
-                    }
-                    break;
+                    case Sensor.TYPE_PRESSURE:
+                        float pressure = sensorEvent.values[0];
+                        float altitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressure);
 
-                case Sensor.TYPE_MAGNETIC_FIELD:
-                    if (groundLock || abaqConst) {
-                        System.arraycopy(sensorEvent.values, 0, magReading,
-                                0, magReading.length);
-                        if (abaqConst) {
-                            float[] orientationVals = new float[3];
-                            SensorManager.getOrientation(rotationMatrix, orientationVals);
-                            azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI) + azimuth_offset;
-                            azimuth = azimuth < 0f ? azimuth + 360f : (azimuth >= 360f ? azimuth - 360f : azimuth);
-                            if (listener != null)
-                                listener.onRotation(azimuth);
-                        }
-                    }
-                    break;
-
-                case Sensor.TYPE_GYROSCOPE:
-                    if (gyroFusion)
-                        gyroFunction(sensorEvent);
-                    break;
-
-                case Sensor.TYPE_LINEAR_ACCELERATION:
-                    if (sensorValsX.size() == 0)
-                        sensorVals_timeStart = sensorEvent.timestamp;
-
-                    if (groundLock || abaqConst) {
-                        SensorManager.getRotationMatrix(
-                                rotationMatrix,
-                                null,
-                                gravAccelReading,
-                                magReading);
-                    }
-
-                    double x_accel_t = sensorEvent.values[0];
-                    double y_accel_t = sensorEvent.values[1];
-                    double z_accel_t = sensorEvent.values[2];
-                    float[] rot;
-                    if (gyroFusion)
-                        rot = gyroMatrix;
-                    else
-                        rot = rotationMatrix;
-
-                    double x_accel = groundLock && !abaqConst ?
-                            x_accel_t * (double)rot[0] + y_accel_t * (double)rot[1] + z_accel_t * (double)rot[2]
-                            : x_accel_t;
-                    double y_accel = groundLock && !abaqConst ?
-                            x_accel_t * (double)rot[3] + y_accel_t * (double)rot[4] + z_accel_t * (double)rot[5]
-                            : y_accel_t;
-                    double z_accel = groundLock && !abaqConst ?
-                            x_accel_t * (double)rot[6] + y_accel_t * (double)rot[7] + z_accel_t * (double)rot[8]
-                            : z_accel_t;
-
-                    x_accel_t = Math.abs(x_accel);
-                    y_accel_t = Math.abs(y_accel);
-                    z_accel_t = Math.abs(z_accel);
-                    x_accel = x_accel_t <= accelThreshMax ? (x_accel_t >= accelThreshMin ? x_accel : 0d) : accelThreshMax;
-                    y_accel = y_accel_t <= accelThreshMax ? (y_accel_t >= accelThreshMin ? y_accel : 0d) : accelThreshMax;
-                    z_accel = z_accel_t <= accelThreshMax ? (z_accel_t >= accelThreshMin ? z_accel : 0d) : accelThreshMax;
-
-                    if (sensorValsX.size() < 4) {
-                        sensorValsX.add(x_accel);
-                        sensorValsY.add(y_accel);
-                        sensorValsZ.add(z_accel);
-                    } else {
-                        double timeDiff = (double)(sensorEvent.timestamp - sensorVals_timeStart) / 1000d;
-
-                        double x_vel = Simp(sensorValsX, timeDiff);
-                        double y_vel = Simp(sensorValsY, timeDiff);
-                        double z_vel = Simp(sensorValsZ, timeDiff);
-                        double x_vel_t = Math.abs(x_vel);
-                        double y_vel_t = Math.abs(y_vel);
-                        double z_vel_t = Math.abs(z_vel);
-                        x_vel = (x_vel_t <= velThreshMax) ?
-                                (x_vel_t >= velThreshMin ? x_vel : 0d) :
-                                (x_vel >= 0d ? velThreshMax : -velThreshMax);
-                        y_vel = (y_vel_t <= velThreshMax) ?
-                                (y_vel_t >= velThreshMin ? y_vel : 0d) :
-                                (x_vel >= 0d ? velThreshMax : -velThreshMax);
-                        z_vel = (z_vel_t <= velThreshMax) ?
-                                (z_vel_t >= velThreshMin ? z_vel : 0d) :
-                                (x_vel >= 0d ? velThreshMax : -velThreshMax);
-
-                        if (abaqConst) {
-                            double velMag = Math.sqrt(x_vel*x_vel + y_vel*y_vel + z_vel*z_vel);
-                            if (velMag>0d) {
-                                x_vel_t = 0d;
-                                y_vel_t = -1d * velMag;
-                                z_vel_t = 0d;
-                                x_vel = x_vel_t * (double) rot[0] + y_vel_t * (double) rot[3] + z_vel_t * (double) rot[6];
-                                y_vel = x_vel_t * (double) rot[1] + y_vel_t * (double) rot[4] + z_vel_t * (double) rot[7];
-                                z_vel = x_vel_t * (double) rot[2] + y_vel_t * (double) rot[5] + z_vel_t * (double) rot[8];
-                                x_vel = (Math.abs(x_vel) <= abaqConstVel) ?
-                                        x_vel :
-                                        (x_vel >= 0d ? abaqConstVel : -abaqConstVel);
-                                y_vel = (Math.abs(y_vel) <= abaqConstVel) ?
-                                        y_vel :
-                                        (y_vel >= 0d ? abaqConstVel : -abaqConstVel);
-                                z_vel = (Math.abs(z_vel) <= abaqConstVel) ?
-                                        z_vel :
-                                        (z_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                        if (listener != null)
+                            listener.onPressureChange(altitude);
+                    case Sensor.TYPE_ACCELEROMETER:
+                        if (groundLock || abaqConst) {
+                            System.arraycopy(sensorEvent.values, 0, gravAccelReading,
+                                    0, gravAccelReading.length);
+                            if (groundLock && gyroFusion && !abaqConst) {
+                                if (SensorManager.getRotationMatrix(rotationMatrix, null, gravAccelReading, magReading))
+                                    SensorManager.getOrientation(rotationMatrix, accMagOrientation);
                             }
                         }
+                        break;
 
-//                        float[] orientationVals = new float[3];
-//                        SensorManager.getOrientation(rot, orientationVals);
-//                        azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI);
-//                        azimuth = azimuth < 0f ? azimuth + 360f : azimuth;
-                        if (listener != null)
-                            listener.onTranslation(x_vel, y_vel, z_vel, 1000000d/timeDiff, azimuth);
+                    case Sensor.TYPE_MAGNETIC_FIELD:
+                        if (groundLock || abaqConst) {
+                            System.arraycopy(sensorEvent.values, 0, magReading,
+                                    0, magReading.length);
+                            if (abaqConst) {
+                                float[] orientationVals = new float[3];
+                                SensorManager.getOrientation(rotationMatrix, orientationVals);
+                                azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI) + azimuth_offset;
+                                azimuth = azimuth < 0f ? azimuth + 360f : (azimuth >= 360f ? azimuth - 360f : azimuth);
+                                if (listener != null)
+                                    listener.onRotation(azimuth);
+                            }
+                        }
+                        break;
 
-                        sensorValsX.clear();
-                        sensorValsY.clear();
-                        sensorValsZ.clear();
-                    }
-                    break;
+                    case Sensor.TYPE_GYROSCOPE:
+                        if (gyroFusion)
+                            gyroFunction(sensorEvent);
+                        break;
+
+                    case Sensor.TYPE_LINEAR_ACCELERATION:
+                        if (sensorValsX.size() == 0)
+                            sensorVals_timeStart = sensorEvent.timestamp;
+
+                        if (groundLock || abaqConst) {
+                            SensorManager.getRotationMatrix(
+                                    rotationMatrix,
+                                    null,
+                                    gravAccelReading,
+                                    magReading);
+                        }
+
+                        double x_accel_t = sensorEvent.values[0];
+                        double y_accel_t = sensorEvent.values[1];
+                        double z_accel_t = sensorEvent.values[2];
+                        float[] rot;
+                        if (gyroFusion)
+                            rot = gyroMatrix;
+                        else
+                            rot = rotationMatrix;
+
+                        double x_accel = groundLock && !abaqConst ?
+                                x_accel_t * (double)rot[0] + y_accel_t * (double)rot[1] + z_accel_t * (double)rot[2]
+                                : x_accel_t;
+                        double y_accel = groundLock && !abaqConst ?
+                                x_accel_t * (double)rot[3] + y_accel_t * (double)rot[4] + z_accel_t * (double)rot[5]
+                                : y_accel_t;
+                        double z_accel = groundLock && !abaqConst ?
+                                x_accel_t * (double)rot[6] + y_accel_t * (double)rot[7] + z_accel_t * (double)rot[8]
+                                : z_accel_t;
+
+                        x_accel_t = Math.abs(x_accel);
+                        y_accel_t = Math.abs(y_accel);
+                        z_accel_t = Math.abs(z_accel);
+                        x_accel = x_accel_t <= accelThreshMax ? (x_accel_t >= accelThreshMin ? x_accel : 0d) : accelThreshMax;
+                        y_accel = y_accel_t <= accelThreshMax ? (y_accel_t >= accelThreshMin ? y_accel : 0d) : accelThreshMax;
+                        z_accel = z_accel_t <= accelThreshMax ? (z_accel_t >= accelThreshMin ? z_accel : 0d) : accelThreshMax;
+
+                        if (sensorValsX.size() < 4) {
+                            sensorValsX.add(x_accel);
+                            sensorValsY.add(y_accel);
+                            sensorValsZ.add(z_accel);
+                        } else {
+                            double timeDiff = (double)(sensorEvent.timestamp - sensorVals_timeStart) / 1000d;
+
+                            double x_vel = Simp(sensorValsX, timeDiff);
+                            double y_vel = Simp(sensorValsY, timeDiff);
+                            double z_vel = Simp(sensorValsZ, timeDiff);
+                            double x_vel_t = Math.abs(x_vel);
+                            double y_vel_t = Math.abs(y_vel);
+                            double z_vel_t = Math.abs(z_vel);
+                            x_vel = (x_vel_t <= velThreshMax) ?
+                                    (x_vel_t >= velThreshMin ? x_vel : 0d) :
+                                    (x_vel >= 0d ? velThreshMax : -velThreshMax);
+                            y_vel = (y_vel_t <= velThreshMax) ?
+                                    (y_vel_t >= velThreshMin ? y_vel : 0d) :
+                                    (x_vel >= 0d ? velThreshMax : -velThreshMax);
+                            z_vel = (z_vel_t <= velThreshMax) ?
+                                    (z_vel_t >= velThreshMin ? z_vel : 0d) :
+                                    (x_vel >= 0d ? velThreshMax : -velThreshMax);
+
+                            if (abaqConst) {
+                                double velMag = Math.sqrt(x_vel*x_vel + y_vel*y_vel + z_vel*z_vel);
+                                if (velMag>0d) {
+                                    x_vel_t = 0d;
+                                    y_vel_t = -1d * velMag;
+                                    z_vel_t = 0d;
+                                    x_vel = x_vel_t * (double) rot[0] + y_vel_t * (double) rot[3] + z_vel_t * (double) rot[6];
+                                    y_vel = x_vel_t * (double) rot[1] + y_vel_t * (double) rot[4] + z_vel_t * (double) rot[7];
+                                    z_vel = x_vel_t * (double) rot[2] + y_vel_t * (double) rot[5] + z_vel_t * (double) rot[8];
+                                    x_vel = (Math.abs(x_vel) <= abaqConstVel) ?
+                                            x_vel :
+                                            (x_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                                    y_vel = (Math.abs(y_vel) <= abaqConstVel) ?
+                                            y_vel :
+                                            (y_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                                    z_vel = (Math.abs(z_vel) <= abaqConstVel) ?
+                                            z_vel :
+                                            (z_vel >= 0d ? abaqConstVel : -abaqConstVel);
+                                }
+                            }
+
+    //                        float[] orientationVals = new float[3];
+    //                        SensorManager.getOrientation(rot, orientationVals);
+    //                        azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI);
+    //                        azimuth = azimuth < 0f ? azimuth + 360f : azimuth;
+                            if (listener != null)
+                                listener.onTranslation(x_vel, y_vel, z_vel, 1000000d/timeDiff, azimuth);
+
+                            sensorValsX.clear();
+                            sensorValsY.clear();
+                            sensorValsZ.clear();
+                        }
+                        break;
                 }
             }
 
@@ -410,6 +424,7 @@ public class Accelerometer {
 
     public void register() {
         sensorManager.registerListener(sensorEventListener, accelSensor, usSamplingDelayAccel);
+        hasBarometer = sensorManager.registerListener(sensorEventListener, barometerSensor, usSamplingDelayAccel);
         if (groundLock || gyroFusion || abaqConst) {
             sensorManager.registerListener(sensorEventListener, gravAccelSensor, usSamplingDelayAccel);
             sensorManager.registerListener(sensorEventListener, magSensor, usSamplingDelayAccel);

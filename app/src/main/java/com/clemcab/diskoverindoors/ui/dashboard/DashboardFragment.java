@@ -55,6 +55,7 @@ public class DashboardFragment extends Fragment {
 
     private Accelerometer accelerometer;
     private DBHelper db;
+
     private ImageView mainImageView;
     private ImageView userMarkerImageView;
     private Bitmap layout;
@@ -63,10 +64,16 @@ public class DashboardFragment extends Fragment {
     private Canvas mapCanvas;
     private Canvas layoutCanvas;
     private Canvas userMarkerCanvas;
+
     private NavigationData navigationData = null;
     private BuildingData buildingData;
+
     double currentX;
     double currentY;
+
+    private float startingAltitude;
+    private float currentAltitude;
+    float altitudeDifference;
 
     // settings for resizing image to bitmaps
     private final int MAP_REQ_WIDTH = 500;
@@ -120,12 +127,17 @@ public class DashboardFragment extends Fragment {
         qrfab = root.findViewById(R.id.qrfab);
         dashboardViewModel = ViewModelProviders.of(this).get(DashboardViewModel.class);
 
+//        observer.qrCOde {
+//            // redraw everything
+//        }
+
         // initiate the 2D scene
         if (navigationData != null && db != null) {
             buildingData = db.getBuildingfromName(navigationData.building);
 
             dashboardBuildingTitle.setText(buildingData.name);
             // print current level name in dashboardStart
+            dashboardStart.setText(buildingData.floorNameFromLevel(navigationData.start_floor));
             dashboardDest.setText(navigationData.dest_room+", "+buildingData.floorNameFromLevel(navigationData.dest_floor));
             dashboardBuildingTitle.setText(buildingData.name);
 
@@ -168,8 +180,7 @@ public class DashboardFragment extends Fragment {
             public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, float azimuth) {
                 // relative velocity m/s -> canvasUnits/s
                 final double multiplier = 500d;
-//                float x_coord = map_pointer.getX();
-//                float y_coord = map_pointer.getY();
+
                 double deltaX = (x_vel*multiplier)/timeDiff;
                 double deltaY = (y_vel*multiplier)/timeDiff;
 
@@ -190,10 +201,58 @@ public class DashboardFragment extends Fragment {
             public void onRotation(float azimuth) {
 //                map_pointer.setRotation(azimuth);
             }
+
+            @Override
+            public void onPressureChange(float altitude) {
+                float threshold = 0.5f; // set for testing
+                if (accelerometer.hasBarometer()) {
+                    if (startingAltitude == 0.0f)
+                        startingAltitude = altitude;
+                     else
+                         currentAltitude = altitude;
+
+                     if (startingAltitude * currentAltitude != 0.0f)
+                         altitudeDifference = startingAltitude - currentAltitude;
+
+                     if (Math.abs(altitudeDifference) >= threshold) {
+                         Log.e("SensorTest", "THRESHOLD BREACH  THRESHOLD BREACH  THRESHOLD BREACH  THRESHOLD BREACH");
+                         if (altitudeDifference > 0) {
+                             // went down, check if at lowest floor
+                             if (navigationData.start_floor > 1) {
+                                 navigationData.start_floor -= 1;
+                             }
+                             Log.e("SensorTest", "DOWN DOWN DOWN DOWN DOWN DOWN");
+                         } else {
+                             // went up, check if at highest floor
+                             if (navigationData.start_floor < buildingData.totalFloors) {
+                                 navigationData.start_floor += 1;
+                             }
+                             Log.e("SensorTest", "UP UP UP UP UP UP UP UP");
+                         }
+                         changeLevel(navigationData.building, navigationData.start_floor);
+                         startingAltitude = currentAltitude;
+//                         Log.e("SensorTest", "RESET starting altitude > " + startingAltitude);
+                     }
+                    Log.e("SensorTest", "onPressureChange: start > " + startingAltitude + " current > " + currentAltitude + " difference > " + altitudeDifference);
+                }
+            }
         });
 
         return root;
     }
+
+    public void changeLevel(String building, int level) {
+        // update map imageView using Glide
+        Glide.with(this)
+                .load(getDrawableId(building, level))
+                .into(mainImageView);
+        dashboardStart.setText(buildingData.floorNameFromLevel(navigationData.start_floor));
+
+        // update destination markers
+            // if same level sa destination set markers to room x/y
+            // else set markers to nearest staircase
+    }
+
 
     public void disableCamera() {
         getActivity().runOnUiThread(new Runnable() {
@@ -428,7 +487,6 @@ public class DashboardFragment extends Fragment {
                     if (centerQR != null) {
                         final String scannedQRCode = centerQR.displayValue;
                         disableCamera();
-
 //                        getActivity().runOnUiThread(new Runnable() {
 //                            @Override
 //                            public void run() {
@@ -453,7 +511,7 @@ public class DashboardFragment extends Fragment {
         });
     }
 
-    // return resource id
+    // return resource id of floor plan image
     public int getDrawableId(String building, int level) {
         int drawableId;
         String imageName = building.toLowerCase().replaceAll("\\s", "_") + "_" + Integer.toString(level);
