@@ -12,5 +12,6 @@
     <string name="code_region_desc">Camera region</string>
 
     <string name="scan_to_start">Scan nearby QR code to start navigating.</string>
+    <string name="camera_required">Camera access is required to scan QR codes.</string>
     <string name="localize_qr">Scan QR code</string>
 </resources>

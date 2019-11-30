@@ -90,10 +90,10 @@ public class HomeFragment extends Fragment {
             public void surfaceCreated(SurfaceHolder holder) {
                 if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(getActivity(), new String[] {Manifest.permission.CAMERA}, 100);
-                    textView.setText("Camera access is required to scan QR codes.");
+                    textView.setText(getActivity().getString(R.string.camera_required));
                     return;
                 }
-                textView.setText("Scan QR code to start navigating.");
+                textView.setText(getActivity().getString(R.string.scan_to_start));
                 try {
                     cameraFrame = getActivity().findViewById(R.id.previewframe);
                     holder.setKeepScreenOn(true);

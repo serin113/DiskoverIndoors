@@ -399,6 +399,7 @@ public class DashboardFragment extends Fragment {
                     if (centerQR != null) {
                         final String scannedQRCode = centerQR.displayValue;
                         disableCamera();
+
 //                        getActivity().runOnUiThread(new Runnable() {
 //                            @Override
 //                            public void run() {
