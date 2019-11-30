@@ -338,6 +338,7 @@ public class HomeFragment extends Fragment {
                         View currView = getView();
                         if (currView != null && isAlertActive) {
                             homeViewModel.setQrCode(qrCode);
+                            ((MainActivity) getActivity()).navView.setVisibility(View.VISIBLE);
                             navigationButton.setEnabled(true);
                             locationButton.setEnabled(true);
                             Navigation.findNavController(currView).navigate(R.id.action_select_destination);

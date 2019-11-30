@@ -93,11 +93,10 @@ public class DashboardFragment extends Fragment {
         return Double.toString(a) + " " + Double.toString(b);
     }
 
-
     @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        db = ((MainActivity) this.getActivity()).DBHelper;
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        this.setRetainInstance(true);
     }
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -109,8 +108,8 @@ public class DashboardFragment extends Fragment {
         dashboardStart = root.findViewById(R.id.dashboardStart);
         dashboardDest = root.findViewById(R.id.dashboardDest);
 
-        db = ((MainActivity)getActivity()).DBHelper;
-        navigationData = ( (MainActivity) (getActivity()) ).navData;
+        db = ((MainActivity) this.getActivity()).DBHelper;
+        navigationData = ((MainActivity) this.getActivity()).navData;
 
         cameraVisible = false;
         surfaceView = root.findViewById(R.id.camerapreview_lock);
@@ -131,6 +130,7 @@ public class DashboardFragment extends Fragment {
             int drawableId = getDrawableId(navigationData.building, navigationData.start_floor);
             if (drawableId > 0) {
                 Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
+
                 Bitmap userMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, USER_MARKER_REQ_WIDTH, USER_MARKER_REQ_HEIGHT);
 
                 mutableMap = map.copy(Bitmap.Config.ARGB_8888, true);

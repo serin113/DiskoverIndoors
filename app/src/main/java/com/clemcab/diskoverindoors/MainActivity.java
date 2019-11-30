@@ -22,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     public Accelerometer Accelerometer;
     public DBHelper DBHelper;
     public NavigationData navData;
+    public BottomNavigationView navView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,7 +35,9 @@ public class MainActivity extends AppCompatActivity {
         navigationButton.setEnabled(false);
         locationButton.setEnabled(false);
 
-        BottomNavigationView navView = findViewById(R.id.nav_view);
+        navView = findViewById(R.id.nav_view);
+
+        navView.setVisibility(View.GONE);
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
