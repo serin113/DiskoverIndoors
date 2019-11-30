@@ -5,26 +5,29 @@
     android:id="@+id/mobile_navigation"
     app:startDestination="@+id/navigation_qr">
 
+
+<!--    android:label="@string/title_home"-->
     <fragment
         android:id="@+id/navigation_qr"
         android:name="com.clemcab.diskoverindoors.ui.home.HomeFragment"
-        android:label="@string/title_home"
         tools:layout="@layout/fragment_home">
         <action
             android:id="@+id/action_select_destination"
             app:destination="@id/navigation_locations"/>
     </fragment>
 
+
+<!--    android:label="@string/title_dashboard"-->
     <fragment
         android:id="@+id/navigation_navigation"
         android:name="com.clemcab.diskoverindoors.ui.dashboard.DashboardFragment"
-        android:label="@string/title_dashboard"
         tools:layout="@layout/fragment_dashboard" />
 
+
+<!--    android:label="@string/title_notifications"-->
     <fragment
         android:id="@+id/navigation_locations"
         android:name="com.clemcab.diskoverindoors.ui.notifications.NotificationsFragment"
-        android:label="@string/title_notifications"
         tools:layout="@layout/fragment_notifications">
         <action
             android:id="@+id/action_list_select"

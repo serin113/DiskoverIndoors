@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
                 R.id.navigation_qr, R.id.navigation_navigation, R.id.navigation_locations)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+//        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(navView, navController);
         Accelerometer = new Accelerometer(this);
         DBHelper = new DBHelper(this);

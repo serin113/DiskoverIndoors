@@ -1,6 +1,6 @@
 package com.clemcab.diskoverindoors.ui.notifications;
 
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.util.Log;
@@ -19,6 +19,7 @@ import com.clemcab.diskoverindoors.IndoorLocation;
 import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -79,7 +80,7 @@ public class CustomAdapter extends BaseAdapter {
 
     public  void displayAlert(NavigationData navigationData) {
         ImageView image = new ImageView(fragment.getActivity());
-        AlertDialog.Builder builder = new AlertDialog.Builder(fragment.getActivity());
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(fragment.getActivity());
 
         //  processes building name and room to generate file name
         //  small caps, no spaces, separated by underscore

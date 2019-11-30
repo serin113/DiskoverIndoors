@@ -1,7 +1,7 @@
 package com.clemcab.diskoverindoors.ui.home;
 
 import android.Manifest;
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Rect;
@@ -34,6 +34,7 @@ import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.IOException;
 
@@ -300,7 +301,7 @@ public class HomeFragment extends Fragment {
     }
 
     public void displayAlert(final String qrCode) {
-        final AlertDialog.Builder builder1 = new AlertDialog.Builder(getActivity());
+        final MaterialAlertDialogBuilder builder1 = new MaterialAlertDialogBuilder(getActivity());
         builder1.setTitle("Navigate");
 
         String[] args = qrCode.split("::",0);

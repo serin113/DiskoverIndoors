@@ -42,7 +42,7 @@ import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.io.IOException;
 
@@ -72,7 +72,7 @@ public class DashboardFragment extends Fragment {
     private int surfaceViewHeight;
     private int surfaceViewWidth;
     private boolean cameraVisible;
-    private FloatingActionButton qrfab;
+    private ExtendedFloatingActionButton qrfab;
     private SurfaceHolder surfaceHolder;
     private DashboardViewModel dashboardViewModel;
 
@@ -116,6 +116,7 @@ public class DashboardFragment extends Fragment {
                 Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
                 Bitmap mutableMap = map.copy(Bitmap.Config.ARGB_8888, true);
                 mapCanvas = new Canvas(mutableMap);
+
 
                 // draw user marker on canvas
                 Bitmap userMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, USER_MARKER_REQ_WIDTH, USER_MARKER_REQ_HEIGHT);
@@ -165,23 +166,50 @@ public class DashboardFragment extends Fragment {
         return root;
     }
 
-    public void toggleCamera() {
+    public void disableCamera() {
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (dashboardFrame.getVisibility() == View.VISIBLE) {
+                if (cameraVisible) {
+                    qrfab.setIcon(getResources().getDrawable(R.drawable.ic_qrcode_solid));
+                    qrfab.extend();
                     dashboardFrame.setVisibility(View.INVISIBLE);
                     cameraSource.stop();
-                } else {
+                    cameraVisible = false;
+                }
+            }
+        });
+    }
+
+    public void enableCamera() {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (!cameraVisible) {
                     if (surfaceHolder != null) {
+                        qrfab.setIcon(getResources().getDrawable(R.drawable.ic_close));
+                        qrfab.shrink();
                         try {
                             dashboardFrame.setVisibility(View.VISIBLE);
                             cameraSource.start(surfaceHolder);
+                            cameraVisible = true;
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
                 }
+            }
+        });
+    }
+
+    public void toggleCamera() {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (dashboardFrame.getVisibility() == View.VISIBLE)
+                    disableCamera();
+                else
+                    enableCamera();
                 dashboardFrame.postInvalidate();
             }
         });
@@ -370,6 +398,7 @@ public class DashboardFragment extends Fragment {
                     }
                     if (centerQR != null) {
                         final String scannedQRCode = centerQR.displayValue;
+                        disableCamera();
 //                        getActivity().runOnUiThread(new Runnable() {
 //                            @Override
 //                            public void run() {
