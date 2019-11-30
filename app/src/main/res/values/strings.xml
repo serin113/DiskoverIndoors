@@ -11,5 +11,6 @@
     <string name="pointer_desc">Map pointer</string>
     <string name="code_region_desc">Camera region</string>
 
-    <string name="scan_to_start">Scan a QR code to start navigating.</string>
+    <string name="scan_to_start">Scan nearby QR code to start navigating.</string>
+    <string name="localize_qr">Scan QR code</string>
 </resources>

@@ -19,9 +19,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textAlignment="center"
-        android:textSize="20sp"
-        android:background="#99000000"
-        android:textColor="#CCFFFFFF"
+        android:textSize="15sp"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@color/colorOverPrimary"
+        android:alpha="50"
         />
 
     <LinearLayout
