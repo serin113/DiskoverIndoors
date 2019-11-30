@@ -30,10 +30,12 @@ public class NotificationsFragment extends Fragment {
     private Float[] startingCoords;
     private ListView listView;
     private Fragment fragment = this;
+    private TextView buildingTitle;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         notificationsViewModel = ViewModelProviders.of(this).get(NotificationsViewModel.class);
         View root = inflater.inflate(R.layout.fragment_notifications, container, false);
+        buildingTitle = root.findViewById(R.id.listBuilding);
         listView = root.findViewById(R.id.listView);
 
         db = ((MainActivity)getActivity()).DBHelper;
@@ -45,9 +47,10 @@ public class NotificationsFragment extends Fragment {
                 scannedQrCode = qrCode;
                 String[] args = scannedQrCode.split("::");
                 int startingLevel = Integer.parseInt(args[1]);
+
+                buildingTitle.setText(args[0]);
                 startingCoords = db.getCoordsFromCode(scannedQrCode);
                 indoorLocationList = db.getRoomList(scannedQrCode);
-
 
                 CustomAdapter customAdapter = new CustomAdapter(fragment, getContext(), indoorLocationList, startingLevel, startingCoords);
                 listView.setAdapter(customAdapter);

@@ -21,4 +21,19 @@ public class BuildingData {
         this.yscale = yscale;
         this.compassDegreeOffset = compassDegreeOffset;
     }
+
+    public String floorNameFromLevel(int level) {
+        final String[] names = {
+                "Lower Ground Floor",
+                "Ground Floor",
+                "Second Floor",
+                "Third Floor",
+                "Fourth Floor",
+                "Fifth Floor",
+                "Sixth Floor"
+        };
+        if (this.hasLGF)
+            return names[level-1];
+        return names[level];
+    }
 }

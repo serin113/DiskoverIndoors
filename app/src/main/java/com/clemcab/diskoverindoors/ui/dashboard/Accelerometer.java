@@ -52,12 +52,18 @@ public class Accelerometer {
     private List<Double> sensorValsZ;
     private long sensorVals_timeStart;
 
+    private float azimuth_offset = 0f;
+
     /* USED ONLY WHEN gyroFusion IS ENABLED */
     private float[] gyroReading;
     private float[] accMagOrientation;
     private float[] gyroOrientation;
     private float[] gyroMatrix;
     private float[] fusedOrientation;
+
+    public void setAzimuthOffset(float offset) {
+        this.azimuth_offset = offset;
+    }
 
     /* GYRO FUSION STUFF */
     private float[] matrixMultiplication(float[] A, float[] B) {
@@ -285,8 +291,8 @@ public class Accelerometer {
                         if (abaqConst) {
                             float[] orientationVals = new float[3];
                             SensorManager.getOrientation(rotationMatrix, orientationVals);
-                            azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI);
-                            azimuth = azimuth < 0f ? azimuth + 360f : azimuth;
+                            azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI) + azimuth_offset;
+                            azimuth = azimuth < 0f ? azimuth + 360f : (azimuth >= 360f ? azimuth - 360f : azimuth);
                             if (listener != null)
                                 listener.onRotation(azimuth);
                         }
@@ -365,9 +371,9 @@ public class Accelerometer {
                                 x_vel_t = 0d;
                                 y_vel_t = -1d * velMag;
                                 z_vel_t = 0d;
-                                x_vel = x_vel_t * (double) rot[0] + y_vel_t * (double) rot[1] + z_vel_t * (double) rot[2];
-                                y_vel = x_vel_t * (double) rot[3] + y_vel_t * (double) rot[4] + z_vel_t * (double) rot[5];
-                                z_vel = x_vel_t * (double) rot[6] + y_vel_t * (double) rot[7] + z_vel_t * (double) rot[8];
+                                x_vel = x_vel_t * (double) rot[0] + y_vel_t * (double) rot[3] + z_vel_t * (double) rot[6];
+                                y_vel = x_vel_t * (double) rot[1] + y_vel_t * (double) rot[4] + z_vel_t * (double) rot[7];
+                                z_vel = x_vel_t * (double) rot[2] + y_vel_t * (double) rot[5] + z_vel_t * (double) rot[8];
                                 x_vel = (Math.abs(x_vel) <= abaqConstVel) ?
                                         x_vel :
                                         (x_vel >= 0d ? abaqConstVel : -abaqConstVel);
@@ -400,8 +406,8 @@ public class Accelerometer {
 
             }
         };
-
     }
+
     public void register() {
         sensorManager.registerListener(sensorEventListener, accelSensor, usSamplingDelayAccel);
         if (groundLock || gyroFusion || abaqConst) {

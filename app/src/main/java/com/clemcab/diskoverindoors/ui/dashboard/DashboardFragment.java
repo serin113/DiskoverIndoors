@@ -82,6 +82,9 @@ public class DashboardFragment extends Fragment {
     private ExtendedFloatingActionButton qrfab;
     private SurfaceHolder surfaceHolder;
     private DashboardViewModel dashboardViewModel;
+    private TextView dashboardBuildingTitle;
+    private TextView dashboardStart;
+    private TextView dashboardDest;
 
     String intsCon(int a, int b) {
         return Integer.toString(a) + " " + Integer.toString(b);
@@ -102,6 +105,10 @@ public class DashboardFragment extends Fragment {
         mainImageView = root.findViewById(R.id.imageViewMain);
         userMarkerImageView = root.findViewById(R.id.imageViewUserMarker);
 
+        dashboardBuildingTitle = root.findViewById(R.id.dashboardBuilding);
+        dashboardStart = root.findViewById(R.id.dashboardStart);
+        dashboardDest = root.findViewById(R.id.dashboardDest);
+
         db = ((MainActivity)getActivity()).DBHelper;
         navigationData = ( (MainActivity) (getActivity()) ).navData;
 
@@ -115,6 +122,12 @@ public class DashboardFragment extends Fragment {
         // initiate the 2D scene
         if (navigationData != null && db != null) {
             buildingData = db.getBuildingfromName(navigationData.building);
+
+            dashboardBuildingTitle.setText(buildingData.name);
+            // print current level name in dashboardStart
+            dashboardDest.setText(navigationData.dest_room+", "+buildingData.floorNameFromLevel(navigationData.dest_floor));
+            dashboardBuildingTitle.setText(buildingData.name);
+
             int drawableId = getDrawableId(navigationData.building, navigationData.start_floor);
             if (drawableId > 0) {
                 Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
@@ -142,7 +155,8 @@ public class DashboardFragment extends Fragment {
         }
 
         // accelerometer handles all sensor computations and management
-        accelerometer = new Accelerometer(getActivity());
+        accelerometer = ((MainActivity) getActivity()).Accelerometer;
+        accelerometer.setAzimuthOffset(buildingData.compassDegreeOffset);
         // handles the user marker's movement
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
@@ -508,14 +522,14 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        cameraSource.stop();
+        disableCamera();
         accelerometer.unregister();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        cameraSource.stop();
+        disableCamera();
         accelerometer.unregister();
         mainImageView.setImageDrawable(null);
         userMarkerImageView.setImageDrawable(null);
