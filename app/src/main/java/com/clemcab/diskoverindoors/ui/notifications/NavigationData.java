@@ -20,4 +20,10 @@ public class NavigationData {
         this.dest_floor = dest_floor;
         this.dest_room = dest_room;
     }
+
+    public void setStart (float x, float y, int floor) {
+        this.start_x = x;
+        this.start_y = y;
+        this.start_floor = floor;
+    }
 }

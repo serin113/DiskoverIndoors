@@ -365,7 +365,8 @@ public class HomeFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        cameraSource.stop();
+        if (cameraSource != null)
+            cameraSource.stop();
     }
 
     @Override

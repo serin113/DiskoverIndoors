@@ -4,14 +4,17 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -50,6 +53,13 @@ public class DashboardFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
+
+        cameraVisible = false;
+        surfaceView = root.findViewById(R.id.camerapreview_lock);
+        surfaceHolder = surfaceView.getHolder();
+        dashboardFrame = root.findViewById(R.id.dashboardCameraFrame);
+        qrfab = root.findViewById(R.id.qrfab);
+        dashboardViewModel = ViewModelProviders.of(this).get(DashboardViewModel.class);
 
         // initiate the 2D scene
         notificationsViewModel = ViewModelProviders.of(this.getActivity()).get(NotificationsViewModel.class);
@@ -122,6 +132,28 @@ public class DashboardFragment extends Fragment {
         return root;
     }
 
+    public void toggleCamera() {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (dashboardFrame.getVisibility() == View.VISIBLE) {
+                    dashboardFrame.setVisibility(View.INVISIBLE);
+                    cameraSource.stop();
+                } else {
+                    if (surfaceHolder != null) {
+                        try {
+                            dashboardFrame.setVisibility(View.VISIBLE);
+                            cameraSource.start(surfaceHolder);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                dashboardFrame.postInvalidate();
+            }
+        });
+    }
+
     // return resource id
     public int getDrawableId(String building, int level) {
         int drawableId;
@@ -190,21 +222,20 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-
         accelerometer.register();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-
+        cameraSource.stop();
         accelerometer.unregister();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-
+        cameraSource.stop();
         accelerometer.unregister();
         imageView.setImageDrawable(null);
     }
