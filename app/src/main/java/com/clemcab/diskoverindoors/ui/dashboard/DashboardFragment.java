@@ -1,6 +1,7 @@
 package com.clemcab.diskoverindoors.ui.dashboard;
 
 import android.Manifest;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -33,6 +34,7 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
+import androidx.navigation.Navigation;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -48,6 +50,7 @@ import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.io.IOException;
@@ -100,6 +103,7 @@ public class DashboardFragment extends Fragment {
     private int surfaceViewHeight;
     private int surfaceViewWidth;
     private boolean cameraVisible;
+    private boolean alertActive;
     private ExtendedFloatingActionButton qrfab;
     private SurfaceHolder surfaceHolder;
     private DashboardViewModel dashboardViewModel;
@@ -228,11 +232,11 @@ public class DashboardFragment extends Fragment {
                 mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
 
-//                if (isNearDestination()) {
-//                    Log.e("NEAR", "yes");
-//                } else {
-//                    Log.e("NEAR", "no");
-//                }
+                if (isNearDestination()) {
+                    if (!alertActive){
+                        displayAlert();
+                    }
+                }
             }
 
             @Override
@@ -368,6 +372,46 @@ public class DashboardFragment extends Fragment {
             }
         }
         return false;
+    }
+
+    public  void displayAlert() {
+        ImageView image = new ImageView(getActivity());
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getActivity());
+
+        alertActive = true;
+
+        //  processes building name and room to generate file name
+        String building = (navigationData.building.toLowerCase()).replaceAll("[^a-z0-9_]","_");
+        String room = (navigationData.dest_room.toLowerCase()).replaceAll("[^a-z0-9_]","_");
+        String level = Integer.toString(navigationData.dest_floor);
+        String destinationImageName = building + "_" + level + "_" + room;
+        Log.e("destinationImageName", destinationImageName );
+
+        builder.setTitle(navigationData.dest_room);
+        builder.setMessage("You've arrived at your destination!");
+        builder.setPositiveButton(
+                "Start new navigation",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        ((MainActivity)getActivity()).navView.setVisibility(View.GONE);
+                        dialog.dismiss();
+                        Navigation.findNavController(getView()).navigate(R.id.go_to_home);
+                    }
+                });
+
+        try {
+            Class res = R.drawable.class;
+            Field field = res.getField(destinationImageName);
+            int drawableId = field.getInt(null);
+            image.setImageResource(drawableId);
+        }
+        catch (Exception e) {
+            image.setImageResource(R.drawable.image_not_found);
+        }
+        builder.setView(image);
+
+        builder.create();
+        builder.show();
     }
 
     public boolean localize(String qrcode) {
