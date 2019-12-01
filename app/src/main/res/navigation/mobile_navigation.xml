@@ -21,7 +21,11 @@
     <fragment
         android:id="@+id/navigation_navigation"
         android:name="com.clemcab.diskoverindoors.ui.dashboard.DashboardFragment"
-        tools:layout="@layout/fragment_dashboard" />
+        tools:layout="@layout/fragment_dashboard">
+        <action
+            android:id="@+id/go_to_home"
+            app:destination="@id/navigation_qr"/>
+    </fragment>
 
 
 <!--    android:label="@string/title_notifications"-->
