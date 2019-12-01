@@ -161,7 +161,6 @@ public class DashboardFragment extends Fragment {
         // initiate the 2D scene
         if (navigationData != null && db != null) {
             buildingData = db.getBuildingfromName(navigationData.building);
-
             accelerometer.setAzimuthOffset(buildingData.compassDegreeOffset);
 
             dashboardBuildingTitle.setText(buildingData.name);
@@ -220,12 +219,14 @@ public class DashboardFragment extends Fragment {
             }
             @Override
             public void onRotation(float azimuth) {
+//                accelerometer.printAzimuth();
                 mapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-
+                final float markerHalfX = ((float)mutableUserMarker.getWidth()/2f);
+                final float markerHalfY = ((float)mutableUserMarker.getHeight()/2f);
                 Matrix matrix = new Matrix();
-                Log.e("MovementTest", "onRotation: (x,y,0) = ((" + currentY + ", " + currentY + ", " + azimuth + ")" );
-                matrix.setRotate(azimuth, mutableUserMarker.getWidth() / 2f, mutableUserMarker.getHeight() / 2f);
-                matrix.postTranslate((float) currentX, (float) currentY);
+//                Log.e("MovementTest", "onRotation: (x,y,0) = ((" + currentY + ", " + currentY + ", " + azimuth + ")" );
+                matrix.setTranslate((float)currentX-markerHalfX, (float)currentY-markerHalfY);
+                matrix.postRotate(azimuth, (float)currentX, (float)currentY);
                 setMarkers(navigationData.start_floor, navigationData.dest_floor);
                 mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
