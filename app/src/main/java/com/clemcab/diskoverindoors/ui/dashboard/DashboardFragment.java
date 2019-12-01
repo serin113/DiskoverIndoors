@@ -236,7 +236,8 @@ public class DashboardFragment extends Fragment {
 
             @Override
             public void onPressureChange(float altitude) {
-                float threshold = 0.5f; // set for testing
+                // set threshold to 60% of vertical distance between floors
+                float threshold = 0.6f * buildingData.delta;
 
                 if (accelerometer.hasBarometer()) {
                     if (startingAltitude == 0.0f)
@@ -253,17 +254,20 @@ public class DashboardFragment extends Fragment {
                              // went down, check if at lowest floor
                              if (navigationData.start_floor > 1) {
                                  navigationData.start_floor -= 1;
+                                 startingAltitude -= buildingData.delta;
                              }
 //                             Log.e("SensorTest", "DOWN DOWN DOWN DOWN DOWN DOWN");
                          } else {
                              // went up, check if at highest floor
                              if (navigationData.start_floor < buildingData.totalFloors) {
                                  navigationData.start_floor += 1;
+                                 startingAltitude += buildingData.delta;
                              }
 //                             Log.e("SensorTest", "UP UP UP UP UP UP UP UP");
                          }
                          changeLevel(navigationData.building, navigationData.start_floor);
-                         startingAltitude = currentAltitude;
+
+
 //                         Log.e("SensorTest", "RESET starting altitude > " + startingAltitude);
                      }
 //                    Log.e("SensorTest", "onPressureChange: start > " + startingAltitude + " current > " + currentAltitude + " difference > " + altitudeDifference);
