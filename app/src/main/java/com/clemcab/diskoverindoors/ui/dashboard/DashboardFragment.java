@@ -47,6 +47,7 @@ import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.io.IOException;
@@ -63,7 +64,7 @@ public class DashboardFragment extends Fragment {
     private ImageView userMarkerImageView;
     private int mapWidth;
     private int mapHeight;
-    private Bitmap mutableMap;;
+    private Bitmap mutableMap;
     private Bitmap mutableUserMarker;
     private Bitmap mutableUpstairsMarker;
     private Bitmap mutableDownstairsMarker;
@@ -86,8 +87,13 @@ public class DashboardFragment extends Fragment {
     private final int MAP_REQ_HEIGHT = 500;
     private final int MARKER_REQ_WIDTH = 30;
     private final int MARKER_REQ_HEIGHT = 30;
+    // canvas units per meter
+    private double METER_PER_DB = 10d;
+    private double DB_PER_METER = 1d/METER_PER_DB;
+    private double CANVAS_PER_DB;
 
     private BarcodeDetector barcodeDetector;
+    private Detector.Processor<Barcode> barcodeProcessor;
     private SurfaceView surfaceView;
     private FrameLayout dashboardFrame;
     private CameraSource cameraSource;
@@ -180,6 +186,8 @@ public class DashboardFragment extends Fragment {
                 mapWidth = mutableMap.getWidth();
                 mapHeight = mutableMap.getHeight();
 
+                CANVAS_PER_DB = ((double)mapWidth / (double)buildingData.xscale);
+
                 staircaseList = db.getStaircaseCoordsFromBuildingAndLevel(navigationData.building,Integer.toString(navigationData.start_floor));
 
                 mapCanvas = new Canvas(mutableMap);
@@ -200,11 +208,8 @@ public class DashboardFragment extends Fragment {
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
             public void onTranslation(double x_vel, double y_vel, double z_vel, double timeDiff, float azimuth) {
-                // relative velocity m/s -> canvasUnits/s
-                final double multiplier = 500d;
-
-                double deltaX = (x_vel*multiplier)/timeDiff;
-                double deltaY = (y_vel*multiplier)/timeDiff;
+                double deltaX = (x_vel*DB_PER_METER*CANVAS_PER_DB)/timeDiff;
+                double deltaY = (y_vel*DB_PER_METER*CANVAS_PER_DB)/timeDiff;
 
                 double newX = currentX + deltaX;
                 double newY = currentY + deltaY;
@@ -219,6 +224,11 @@ public class DashboardFragment extends Fragment {
                 setMarkers(navigationData.start_floor, navigationData.dest_floor);
                 mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
+//                if (isNearDestination()) {
+//                    Log.e("NEAR", "yes");
+//                } else {
+//                    Log.e("NEAR", "no");
+//                }
             }
             @Override
             public void onRotation(float azimuth) {
@@ -343,12 +353,24 @@ public class DashboardFragment extends Fragment {
         return Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
     }
 
+    public boolean isNearDestination() {
+        if (navigationData.dest_floor == navigationData.start_floor) {
+            if (euclidianDistance(
+                    currentX, currentY,
+                    getRelativeCoords((double)navigationData.dest_x, (double)buildingData.xscale, mapWidth),
+                    getRelativeCoords((double)navigationData.dest_y * -1, (double)buildingData.yscale, mapHeight)
+            ) <= (5d * (DB_PER_METER * CANVAS_PER_DB))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean localize(String qrcode) {
         String[] code_fields = qrcode.split("::", 0);
-        Log.e("HELLO_bd", buildingData.alias + " " + Integer.toString(buildingData.alias.length()));
-        Log.e("HELLO_co", code_fields[0] + " " + Integer.toString(code_fields[0].trim().length()));
-        Log.e("HELLO_bool", Boolean.toString(buildingData.alias.equals(code_fields[0])));
         if (buildingData.alias.equals(code_fields[0])) {
+            accelerometer.setAzimuthOffset(buildingData.compassDegreeOffset);
+
             Float[] rel_coords = db.getCoordsFromCode(qrcode);
 
             double x_coord = getRelativeCoords((double) rel_coords[0], (double) buildingData.xscale, mapWidth);
@@ -372,40 +394,76 @@ public class DashboardFragment extends Fragment {
         return false;
     }
 
-    public void disableCamera() {
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (cameraVisible) {
-                    qrfab.setIcon(getResources().getDrawable(R.drawable.ic_qrcode_solid));
-                    qrfab.extend();
-                    dashboardFrame.setVisibility(View.INVISIBLE);
-                    cameraSource.stop();
-                    cameraVisible = false;
+    public void disableCamera(boolean onUIThread) {
+        if (onUIThread) {
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (cameraVisible) {
+                        barcodeDetector.release();
+                        dashboardFrame.setVisibility(View.INVISIBLE);
+                        cameraSource.stop();
+                        cameraVisible = false;
+                        qrfab.setIcon(getResources().getDrawable(R.drawable.ic_qrcode_solid));
+                        qrfab.extend();
+                    }
                 }
+            });
+        } else {
+            if (cameraVisible) {
+                barcodeDetector.release();
+                dashboardFrame.setVisibility(View.INVISIBLE);
+                cameraSource.stop();
+                cameraVisible = false;
+                qrfab.setIcon(getResources().getDrawable(R.drawable.ic_qrcode_solid));
+                qrfab.extend();
             }
-        });
+        }
+    }
+    public void disableCamera() {
+        disableCamera(true);
     }
 
-    public void enableCamera() {
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (!cameraVisible) {
-                    if (surfaceHolder != null) {
-                        qrfab.setIcon(getResources().getDrawable(R.drawable.ic_close));
-                        qrfab.shrink();
-                        try {
-                            dashboardFrame.setVisibility(View.VISIBLE);
-                            cameraSource.start(surfaceHolder);
-                            cameraVisible = true;
-                        } catch (Exception e) {
-                            e.printStackTrace();
+    public void enableCamera(boolean onUIThread) {
+        if (onUIThread) {
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (!cameraVisible) {
+                        if (surfaceHolder != null) {
+                            try {
+                                dashboardFrame.setVisibility(View.VISIBLE);
+                                cameraSource.start(surfaceHolder);
+                                barcodeDetector.setProcessor(barcodeProcessor);
+                                cameraVisible = true;
+                                qrfab.setIcon(getResources().getDrawable(R.drawable.ic_close));
+                                qrfab.shrink();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }
+            });
+        } else {
+            if (!cameraVisible) {
+                if (surfaceHolder != null) {
+                    try {
+                        dashboardFrame.setVisibility(View.VISIBLE);
+                        cameraSource.start(surfaceHolder);
+                        barcodeDetector.setProcessor(barcodeProcessor);
+                        cameraVisible = true;
+                        qrfab.setIcon(getResources().getDrawable(R.drawable.ic_close));
+                        qrfab.shrink();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
             }
-        });
+        }
+    }
+    public void enableCamera() {
+        enableCamera(true);
     }
 
     public void toggleCamera() {
@@ -413,9 +471,9 @@ public class DashboardFragment extends Fragment {
             @Override
             public void run() {
                 if (dashboardFrame.getVisibility() == View.VISIBLE)
-                    disableCamera();
+                    disableCamera(false);
                 else
-                    enableCamera();
+                    enableCamera(false);
                 dashboardFrame.postInvalidate();
             }
         });
@@ -427,6 +485,7 @@ public class DashboardFragment extends Fragment {
 
         qrfab.setOnClickListener(
             new View.OnClickListener() {
+                @Override
                 public void onClick(View v) {
                     toggleCamera();
                 }
@@ -517,7 +576,7 @@ public class DashboardFragment extends Fragment {
         surfaceHolder.addCallback(initCameraPreviewCallback);
 
         // handle processing of detected QR codes
-        barcodeDetector.setProcessor(new Detector.Processor<Barcode>() {
+        barcodeProcessor = new Detector.Processor<Barcode>() {
             @Override
             public void release() {
 
@@ -622,7 +681,8 @@ public class DashboardFragment extends Fragment {
                     }
                 }
             }
-        });
+        };
+        barcodeDetector.setProcessor(barcodeProcessor);
     }
 
     // return resource id of floor plan image
