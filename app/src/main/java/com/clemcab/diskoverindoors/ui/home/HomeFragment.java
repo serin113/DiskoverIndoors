@@ -26,9 +26,12 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.Navigation;
 
+import com.clemcab.diskoverindoors.BuildConfig;
+import com.clemcab.diskoverindoors.BuildingData;
 import com.clemcab.diskoverindoors.DBHelper;
 import com.clemcab.diskoverindoors.MainActivity;
 import com.clemcab.diskoverindoors.R;
+import com.clemcab.diskoverindoors.ui.notifications.NavigationData;
 import com.clemcab.diskoverindoors.ui.notifications.NotificationsViewModel;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
@@ -302,31 +305,22 @@ public class HomeFragment extends Fragment {
 
     public void displayAlert(final String qrCode) {
         final MaterialAlertDialogBuilder builder1 = new MaterialAlertDialogBuilder(getActivity());
-        builder1.setTitle("Navigate");
 
         String[] args = qrCode.split("::",0);
         String building = args[0];
-        String room = args[2];
-        String level;
-        switch (args[1]){
-            case "1":
-                level = "lower ground floor";
-                break;
-            case "2":
-                level = "1st floor";
-                break;
-            case "3":
-                level = "2nd floor";
-                break;
-            case "4":
-                level = "3rd floor";
-                break;
-            default:
-                level = null;
-        }
+        Log.e("StringTest", "from QR code " + building + " " + building.length() );
+        int level = Integer.parseInt(args[1]);
 
+        BuildingData buildingData = db.getBuildingfromName(building);
 
-        String message = "You are at " + room + ", " + level + " of " + building;
+        String floorName = buildingData.floorNameFromLevel(level);
+        String buildingAlias = buildingData.alias;
+        String buildingName = buildingData.name;
+        Log.e("StringTest", "from database " + buildingAlias + " " + buildingAlias.length() );
+
+        builder1.setTitle("Navigate");
+
+        String message = "You are at " + floorName + " of " + buildingName + " (" + buildingAlias + ")";
         builder1.setMessage(message);
 
         builder1.setCancelable(true);
