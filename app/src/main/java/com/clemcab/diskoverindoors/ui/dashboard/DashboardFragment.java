@@ -12,6 +12,7 @@ import android.graphics.Matrix;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
@@ -34,6 +35,7 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.clemcab.diskoverindoors.BuildingData;
 import com.clemcab.diskoverindoors.DBHelper;
 import com.clemcab.diskoverindoors.MainActivity;
@@ -110,9 +112,21 @@ public class DashboardFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.setRetainInstance(true);
+
+        db = ((MainActivity) this.getActivity()).DBHelper;
+
+        mutableUpstairsMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.upstairs_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
+        mutableDownstairsMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.downstairs_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
+        mutableDestinationMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.destination_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
+        mutableUserMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
+
+        // accelerometer handles all sensor computations and management
+        accelerometer = ((MainActivity) getActivity()).Accelerometer;
     }
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        navigationData = ((MainActivity) this.getActivity()).navData;
+
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
         mainImageView = root.findViewById(R.id.imageViewMain);
         userMarkerImageView = root.findViewById(R.id.imageViewUserMarker);
@@ -121,14 +135,13 @@ public class DashboardFragment extends Fragment {
         dashboardStart = root.findViewById(R.id.dashboardStart);
         dashboardDest = root.findViewById(R.id.dashboardDest);
 
-        db = ((MainActivity) this.getActivity()).DBHelper;
-        navigationData = ((MainActivity) this.getActivity()).navData;
-
         cameraVisible = false;
+
         surfaceView = root.findViewById(R.id.camerapreview_lock);
         surfaceHolder = surfaceView.getHolder();
         dashboardFrame = root.findViewById(R.id.dashboardCameraFrame);
         qrfab = root.findViewById(R.id.qrfab);
+
         dashboardViewModel = ViewModelProviders.of(this).get(DashboardViewModel.class);
 
 //        observer.qrCOde {
@@ -139,6 +152,8 @@ public class DashboardFragment extends Fragment {
         if (navigationData != null && db != null) {
             buildingData = db.getBuildingfromName(navigationData.building);
 
+            accelerometer.setAzimuthOffset(buildingData.compassDegreeOffset);
+
             dashboardBuildingTitle.setText(buildingData.name);
             // print current level name in dashboardStart
             dashboardStart.setText(buildingData.floorNameFromLevel(navigationData.start_floor));
@@ -147,24 +162,23 @@ public class DashboardFragment extends Fragment {
 
             int drawableId = getDrawableId(navigationData.building, navigationData.start_floor);
             if (drawableId > 0) {
-                Bitmap map = decodeSampledBitmapFromResource(getActivity().getResources(), drawableId, MAP_REQ_WIDTH, MAP_REQ_HEIGHT);
-                Bitmap userMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.map_pointer, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
+                Glide.with(this)
+                        .load(drawableId)
+                        .diskCacheStrategy(DiskCacheStrategy.NONE)
+                        .skipMemoryCache(true)
+                        .into(mainImageView);
 
-                Bitmap upstairsMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.upstairs_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
-                Bitmap downstairsMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.downstairs_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
-                Bitmap destinationMarker = decodeSampledBitmapFromResource(getActivity().getResources(), R.drawable.destination_marker, MARKER_REQ_WIDTH, MARKER_REQ_HEIGHT);
-
-                mutableMap = map.copy(Bitmap.Config.ARGB_8888, true);
-                mapWidth = mutableMap.getWidth();
-                mapHeight = mutableMap.getHeight();
-
-                mutableUserMarker = userMarker.copy(Bitmap.Config.ARGB_8888, true);
                 int userMarkerWidth = mutableUserMarker.getWidth();
                 int userMarkerHeight = mutableUserMarker.getHeight();
 
-                mutableUpstairsMarker = upstairsMarker.copy(Bitmap.Config.ARGB_8888, true);
-                mutableDownstairsMarker = downstairsMarker.copy(Bitmap.Config.ARGB_8888, true);
-                mutableDestinationMarker = destinationMarker.copy(Bitmap.Config.ARGB_8888, true);
+                BitmapFactory.Options opt = new BitmapFactory.Options();
+                opt.inJustDecodeBounds = true;
+                BitmapFactory.decodeResource(getResources(), drawableId, opt);
+                if (mutableMap != null)
+                    mutableMap.recycle();
+                mutableMap = Bitmap.createBitmap(opt.outWidth, opt.outHeight, Bitmap.Config.ARGB_8888);
+                mapWidth = mutableMap.getWidth();
+                mapHeight = mutableMap.getHeight();
 
                 staircaseList = db.getStaircaseCoordsFromBuildingAndLevel(navigationData.building,Integer.toString(navigationData.start_floor));
 
@@ -179,16 +193,9 @@ public class DashboardFragment extends Fragment {
                 currentY = y_coord - (userMarkerHeight / 2f);
                 mapCanvas.drawBitmap(mutableUserMarker, (float) currentX, (float) currentY, null);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
-
-                Glide.with(this)
-                        .load(drawableId)
-                        .into(mainImageView);
             }
         }
 
-        // accelerometer handles all sensor computations and management
-        accelerometer = ((MainActivity) getActivity()).Accelerometer;
-        accelerometer.setAzimuthOffset(buildingData.compassDegreeOffset);
         // handles the user marker's movement
         accelerometer.setListener(new Accelerometer.Listener() {
             @Override
@@ -209,8 +216,8 @@ public class DashboardFragment extends Fragment {
                 currentX = newX;
                 currentY = newY;
                 mapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 setMarkers(navigationData.start_floor, navigationData.dest_floor);
+                mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
 
 //                if same level {ifNearDestination();}
@@ -264,6 +271,8 @@ public class DashboardFragment extends Fragment {
     public void changeLevel(String building, int newLevel) {
         Glide.with(this)
                 .load(getDrawableId(building, newLevel))
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(true)
                 .into(mainImageView);
         dashboardStart.setText(buildingData.floorNameFromLevel(newLevel));
         setMarkers(newLevel,navigationData.dest_floor);
@@ -336,6 +345,34 @@ public class DashboardFragment extends Fragment {
         return Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
     }
 
+    public boolean localize(String qrcode) {
+        String[] code_fields = qrcode.split("::", 0);
+        Log.e("HELLO_bd", buildingData.alias + " " + Integer.toString(buildingData.alias.length()));
+        Log.e("HELLO_co", code_fields[0] + " " + Integer.toString(code_fields[0].trim().length()));
+        Log.e("HELLO_bool", Boolean.toString(buildingData.alias.equals(code_fields[0])));
+        if (buildingData.alias.equals(code_fields[0])) {
+            Float[] rel_coords = db.getCoordsFromCode(qrcode);
+
+            double x_coord = getRelativeCoords((double) rel_coords[0], (double) buildingData.xscale, mapWidth);
+            double y_coord = getRelativeCoords((double) rel_coords[1] * -1, (double) buildingData.yscale, mapHeight);
+
+            navigationData.start_floor = Integer.parseInt(code_fields[1]);
+            navigationData.start_x = rel_coords[0];
+            navigationData.start_y = rel_coords[1];
+
+            double adjustedX = x_coord - (mutableUserMarker.getWidth() / 2f); // adjusts to the center of the image
+            double adjustedY = y_coord - (mutableUserMarker.getHeight() / 2f);
+
+            currentX = adjustedX;
+            currentY = adjustedY;
+
+//            mapCanvas.drawBitmap(mutableUserMarker, (float) adjustedX, (float) adjustedY, null);
+
+            changeLevel(navigationData.building, navigationData.start_floor);
+            return true;
+        }
+        return false;
+    }
 
     public void disableCamera() {
         getActivity().runOnUiThread(new Runnable() {
@@ -570,24 +607,20 @@ public class DashboardFragment extends Fragment {
                     if (centerQR != null) {
                         final String scannedQRCode = centerQR.displayValue;
                         disableCamera();
-//                        getActivity().runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                if (db.codeExists(scannedQRCode)) {
-//                                    if (!isAlertActive) {
-//                                        displayAlert(scannedQRCode);
-//                                        isAlertActive = true;
-//                                        cameraSource.stop();
-//                                    }
-//                                } else {
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (db.codeExists(scannedQRCode)) {
+                                    localize(scannedQRCode);
+                                } else {
 //                                    if (toast != null) {
 //                                        toast.cancel();
 //                                    }
 //                                    toast = Toast.makeText(getActivity(), "Invalid QR code: " + scannedQRCode, Toast.LENGTH_SHORT);
 //                                    toast.show();
-//                                }
-//                            }
-//                        });
+                                }
+                            }
+                        });
                     }
                 }
             }
@@ -649,6 +682,7 @@ public class DashboardFragment extends Fragment {
         // First decode with inJustDecodeBounds=true to check dimensions
         final BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
+        options.inMutable = true;
         BitmapFactory.decodeResource(res, resId, options);
 
         // Calculate inSampleSize
