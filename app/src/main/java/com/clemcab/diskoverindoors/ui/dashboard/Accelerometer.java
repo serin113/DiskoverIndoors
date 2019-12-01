@@ -1,12 +1,14 @@
 package com.clemcab.diskoverindoors.ui.dashboard;
 
 import android.content.Context;
+import android.graphics.Matrix;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
 
+import java.nio.FloatBuffer;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.TimerTask;
@@ -56,6 +58,7 @@ public class Accelerometer {
     private long sensorVals_timeStart;
 
     private float azimuth_offset = 0f;
+    private float[] azimuth_offset_matrix;
 
     /* USED ONLY WHEN gyroFusion IS ENABLED */
     private float[] gyroReading;
@@ -65,7 +68,14 @@ public class Accelerometer {
     private float[] fusedOrientation;
 
     public void setAzimuthOffset(float offset) {
+        Matrix m = new Matrix();
+        m.setRotate(offset);
         this.azimuth_offset = offset;
+        m.getValues(this.azimuth_offset_matrix);
+    }
+    public void printAzimuth() {
+        Log.e("AZIMUTH", Float.toString(this.azimuth));
+        Log.e("AZIMUTH_OFFSET", Float.toString(this.azimuth_offset));
     }
 
     public boolean hasBarometer() {
@@ -241,6 +251,9 @@ public class Accelerometer {
 
     /* ACCELEROMETER CLASS INITIATION */
     public Accelerometer (Context context) {
+        azimuth_offset_matrix = new float[9];
+        new Matrix().getValues(azimuth_offset_matrix);
+
         gravAccelReading = new float[3];
         magReading = new float[3];
         rotationMatrix = new float[9];
@@ -388,6 +401,17 @@ public class Accelerometer {
                                     x_vel = x_vel_t * (double) rot[0] + y_vel_t * (double) rot[3] + z_vel_t * (double) rot[6];
                                     y_vel = x_vel_t * (double) rot[1] + y_vel_t * (double) rot[4] + z_vel_t * (double) rot[7];
                                     z_vel = x_vel_t * (double) rot[2] + y_vel_t * (double) rot[5] + z_vel_t * (double) rot[8];
+
+                                    if (azimuth_offset != 0) {
+                                        rot = azimuth_offset_matrix;
+                                        x_vel_t = x_vel;
+                                        y_vel_t = y_vel;
+                                        z_vel_t = z_vel;
+                                        x_vel = x_vel_t * (double) rot[0] + y_vel_t * (double) rot[1] + z_vel_t * (double) rot[2];
+                                        y_vel = x_vel_t * (double) rot[3] + y_vel_t * (double) rot[4] + z_vel_t * (double) rot[5];
+                                        z_vel = x_vel_t * (double) rot[6] + y_vel_t * (double) rot[7] + z_vel_t * (double) rot[8];
+                                    }
+
                                     x_vel = (Math.abs(x_vel) <= abaqConstVel) ?
                                             x_vel :
                                             (x_vel >= 0d ? abaqConstVel : -abaqConstVel);
