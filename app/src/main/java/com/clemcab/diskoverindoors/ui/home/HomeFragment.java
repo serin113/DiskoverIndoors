@@ -347,19 +347,30 @@ public class HomeFragment extends Fragment {
                     }
                 });
 
-        builder1.setNegativeButton(
-                "Cancel",
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        dialog.cancel();
-                        isAlertActive = false;
-                        try {
-                            cameraSource.start(surfaceView.getHolder());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+        builder1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    dialog.cancel();
+                    isAlertActive = false;
+                    try {
+                        cameraSource.start(surfaceView.getHolder());
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                });
+                }
+        });
+
+        builder1.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                isAlertActive = false;
+                try {
+                    cameraSource.start(surfaceView.getHolder());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
         AlertDialog navigateDialog = builder1.create();
         navigateDialog.show();
     }

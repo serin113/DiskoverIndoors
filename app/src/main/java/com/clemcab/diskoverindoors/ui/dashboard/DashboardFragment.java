@@ -216,8 +216,8 @@ public class DashboardFragment extends Fragment {
                 currentX = newX;
                 currentY = newY;
                 mapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 setMarkers(navigationData.start_floor, navigationData.dest_floor);
+                mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
             }
             @Override
