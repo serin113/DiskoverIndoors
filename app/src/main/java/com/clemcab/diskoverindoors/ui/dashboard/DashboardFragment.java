@@ -269,6 +269,8 @@ public class DashboardFragment extends Fragment {
     public void changeLevel(String building, int newLevel) {
         Glide.with(this)
                 .load(getDrawableId(building, newLevel))
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(true)
                 .into(mainImageView);
         dashboardStart.setText(buildingData.floorNameFromLevel(newLevel));
         setMarkers(newLevel,navigationData.dest_floor);
@@ -341,6 +343,34 @@ public class DashboardFragment extends Fragment {
         return Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
     }
 
+    public boolean localize(String qrcode) {
+        String[] code_fields = qrcode.split("::", 0);
+        Log.e("HELLO_bd", buildingData.alias + " " + Integer.toString(buildingData.alias.length()));
+        Log.e("HELLO_co", code_fields[0] + " " + Integer.toString(code_fields[0].trim().length()));
+        Log.e("HELLO_bool", Boolean.toString(buildingData.alias.equals(code_fields[0])));
+        if (buildingData.alias.equals(code_fields[0])) {
+            Float[] rel_coords = db.getCoordsFromCode(qrcode);
+
+            double x_coord = getRelativeCoords((double) rel_coords[0], (double) buildingData.xscale, mapWidth);
+            double y_coord = getRelativeCoords((double) rel_coords[1] * -1, (double) buildingData.yscale, mapHeight);
+
+            navigationData.start_floor = Integer.parseInt(code_fields[1]);
+            navigationData.start_x = rel_coords[0];
+            navigationData.start_y = rel_coords[1];
+
+            double adjustedX = x_coord - (mutableUserMarker.getWidth() / 2f); // adjusts to the center of the image
+            double adjustedY = y_coord - (mutableUserMarker.getHeight() / 2f);
+
+            currentX = adjustedX;
+            currentY = adjustedY;
+
+//            mapCanvas.drawBitmap(mutableUserMarker, (float) adjustedX, (float) adjustedY, null);
+
+            changeLevel(navigationData.building, navigationData.start_floor);
+            return true;
+        }
+        return false;
+    }
 
     public void disableCamera() {
         getActivity().runOnUiThread(new Runnable() {
@@ -575,24 +605,20 @@ public class DashboardFragment extends Fragment {
                     if (centerQR != null) {
                         final String scannedQRCode = centerQR.displayValue;
                         disableCamera();
-//                        getActivity().runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                if (db.codeExists(scannedQRCode)) {
-//                                    if (!isAlertActive) {
-//                                        displayAlert(scannedQRCode);
-//                                        isAlertActive = true;
-//                                        cameraSource.stop();
-//                                    }
-//                                } else {
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (db.codeExists(scannedQRCode)) {
+                                    localize(scannedQRCode);
+                                } else {
 //                                    if (toast != null) {
 //                                        toast.cancel();
 //                                    }
 //                                    toast = Toast.makeText(getActivity(), "Invalid QR code: " + scannedQRCode, Toast.LENGTH_SHORT);
 //                                    toast.show();
-//                                }
-//                            }
-//                        });
+                                }
+                            }
+                        });
                     }
                 }
             }
