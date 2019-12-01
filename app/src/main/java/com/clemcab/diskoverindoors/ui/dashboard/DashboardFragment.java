@@ -106,6 +106,7 @@ public class DashboardFragment extends Fragment {
     private TextView dashboardBuildingTitle;
     private TextView dashboardStart;
     private TextView dashboardDest;
+    private Toast toast = null;
 
     String intsCon(int a, int b) {
         return Integer.toString(a) + " " + Integer.toString(b);
@@ -512,6 +513,7 @@ public class DashboardFragment extends Fragment {
 
                     CameraSource.Builder cameraSourceBuilder = new CameraSource.Builder(getActivity(), barcodeDetector)
                             .setFacing(CameraSource.CAMERA_FACING_BACK)
+                            .setRequestedFps(15)
                             .setAutoFocusEnabled(true);
 
                     if ((double) viewHeight / (double) viewWidth >= 1) {
@@ -593,7 +595,7 @@ public class DashboardFragment extends Fragment {
                 if (qrCodes.size()!=0) {
                     Barcode centerQR = null;
 
-                    final int buffer_div = 7;
+                    final int buffer_div = ((MainActivity)getActivity()).CameraRegionThreshold;
 
                     int camHeight = cameraSource.getPreviewSize().getHeight();
                     int camWidth = cameraSource.getPreviewSize().getWidth();
@@ -666,18 +668,18 @@ public class DashboardFragment extends Fragment {
                     }
                     if (centerQR != null) {
                         final String scannedQRCode = centerQR.displayValue;
-                        disableCamera();
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 if (db.codeExists(scannedQRCode)) {
                                     localize(scannedQRCode);
+                                    disableCamera();
                                 } else {
-//                                    if (toast != null) {
-//                                        toast.cancel();
-//                                    }
-//                                    toast = Toast.makeText(getActivity(), "Invalid QR code: " + scannedQRCode, Toast.LENGTH_SHORT);
-//                                    toast.show();
+                                    if (toast != null) {
+                                        toast.cancel();
+                                    }
+                                    toast = Toast.makeText(getActivity(), "Invalid QR code: " + scannedQRCode, Toast.LENGTH_SHORT);
+                                    toast.show();
                                 }
                             }
                         });

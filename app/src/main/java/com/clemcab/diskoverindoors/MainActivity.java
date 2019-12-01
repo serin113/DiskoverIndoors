@@ -23,6 +23,8 @@ public class MainActivity extends AppCompatActivity {
     public DBHelper DBHelper;
     public NavigationData navData;
     public BottomNavigationView navView;
+    // 1/6
+    public int CameraRegionThreshold = 6;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
         locationButton.setEnabled(false);
 
         navView = findViewById(R.id.nav_view);
-
         navView.setVisibility(View.GONE);
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.

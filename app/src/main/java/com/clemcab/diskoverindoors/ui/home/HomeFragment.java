@@ -105,6 +105,7 @@ public class HomeFragment extends Fragment {
 
                     CameraSource.Builder cameraSourceBuilder = new CameraSource.Builder(getActivity(),barcodeDetector)
                             .setFacing(CameraSource.CAMERA_FACING_BACK)
+                            .setRequestedFps(15)
                             .setAutoFocusEnabled(true);
 
                     if ((double)viewHeight/(double)viewWidth >= 1) {
@@ -187,7 +188,7 @@ public class HomeFragment extends Fragment {
                 if (qrCodes.size()!=0) {
                     Barcode centerQR = null;
 
-                    final int buffer_div = 7;
+                    final int buffer_div = ((MainActivity)getActivity()).CameraRegionThreshold;
 
                     int camHeight = cameraSource.getPreviewSize().getHeight();
                     int camWidth = cameraSource.getPreviewSize().getWidth();
