@@ -206,25 +206,21 @@ public class DashboardFragment extends Fragment {
                 double deltaX = (x_vel*multiplier)/timeDiff;
                 double deltaY = (y_vel*multiplier)/timeDiff;
 
-                double newX = currentX + deltaX;
-                double newY = currentY + deltaY;
+                currentX += deltaX;
+                currentY += + deltaY;
+            }
+            @Override
+            public void onRotation(float azimuth) {
+                mapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
                 Matrix matrix = new Matrix();
-                matrix.setRotate(azimuth);
-                matrix.setTranslate((float) newX, (float) newY);
-
-                currentX = newX;
-                currentY = newY;
-                mapCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+                Log.e("MovementTest", "onRotation: (x,y,0) = ((" + currentY + ", " + currentY + ", " + azimuth + ")" );
+                matrix.setRotate(azimuth, mutableUserMarker.getWidth() / 2f, mutableUserMarker.getHeight() / 2f);
+                matrix.postTranslate((float) currentX, (float) currentY);
                 setMarkers(navigationData.start_floor, navigationData.dest_floor);
                 mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
 
-//                if same level {ifNearDestination();}
-            }
-            @Override
-            public void onRotation(float azimuth) {
-//                map_pointer.setRotation(azimuth);
             }
 
             @Override
