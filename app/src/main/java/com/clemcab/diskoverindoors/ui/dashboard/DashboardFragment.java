@@ -212,6 +212,8 @@ public class DashboardFragment extends Fragment {
                 mapCanvas.drawBitmap(mutableUserMarker, matrix, null);
                 setMarkers(navigationData.start_floor, navigationData.dest_floor);
                 userMarkerImageView.setImageDrawable(new BitmapDrawable(getActivity().getResources(), mutableMap));
+
+//                if same level {ifNearDestination();}
             }
             @Override
             public void onRotation(float azimuth) {
