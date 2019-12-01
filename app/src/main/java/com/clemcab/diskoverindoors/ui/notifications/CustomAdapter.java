@@ -83,11 +83,12 @@ public class CustomAdapter extends BaseAdapter {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(fragment.getActivity());
 
         //  processes building name and room to generate file name
-        //  small caps, no spaces, separated by underscore
-        String building = navigationData.building.toLowerCase().replaceAll("\\s+","_");
+        //  regex:
+        String building = (navigationData.building.toLowerCase()).replaceAll("[^a-z0-9_]","_");
+        String room = (navigationData.dest_room.toLowerCase()).replaceAll("[^a-z0-9_]","_");
         String level = Integer.toString(navigationData.dest_floor);
-        String room = navigationData.dest_room.toLowerCase().replaceAll("\\s+","_");
         String destinationImageName = building + "_" + level + "_" + room;
+        Log.e("destinationImageName", destinationImageName );
 
         builder.setMessage("This is your destination.");
         builder.setPositiveButton(
