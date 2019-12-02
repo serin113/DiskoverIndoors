@@ -245,7 +245,7 @@ public class Accelerometer {
                 timeDiff * (
                     vals.get(0) + 3d*(vals.get(1)+vals.get(2)) + vals.get(3)
                 )
-            ) / 2000000d;
+            ) / 2000000000d;
         return velocity;
     }
 
@@ -374,7 +374,7 @@ public class Accelerometer {
                             sensorValsY.add(y_accel);
                             sensorValsZ.add(z_accel);
                         } else {
-                            double timeDiff = (double)(sensorEvent.timestamp - sensorVals_timeStart) / 1000d;
+                            double timeDiff = (double)(sensorEvent.timestamp - sensorVals_timeStart);
 
                             double x_vel = Simp(sensorValsX, timeDiff);
                             double y_vel = Simp(sensorValsY, timeDiff);
@@ -429,7 +429,7 @@ public class Accelerometer {
     //                        azimuth = (float)(((double)orientationVals[0]*180d)/Math.PI);
     //                        azimuth = azimuth < 0f ? azimuth + 360f : azimuth;
                             if (listener != null)
-                                listener.onTranslation(x_vel, y_vel, z_vel, 1000000d/timeDiff, azimuth);
+                                listener.onTranslation(x_vel, y_vel, z_vel, 1000000000d/timeDiff, azimuth);
 
                             sensorValsX.clear();
                             sensorValsY.clear();

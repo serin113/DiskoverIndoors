@@ -190,7 +190,7 @@ public class DashboardFragment extends Fragment {
                 mapWidth = mutableMap.getWidth();
                 mapHeight = mutableMap.getHeight();
 
-                CANVAS_PER_DB = ((double)mapWidth / (double)buildingData.xscale);
+                CANVAS_PER_DB = ((double)mapWidth / (double)buildingData.xscale) * 7d;
 
                 staircaseList = db.getStaircaseCoordsFromBuildingAndLevel(navigationData.building,Integer.toString(navigationData.start_floor));
 
